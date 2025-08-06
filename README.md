@@ -10,8 +10,8 @@ The analysis workflow consists of four main scripts:
 4) PropensityScore_joined_cohorts_mel_rcc_lung.Rmd
 
 and two helper scripts defining functions:
-A) Survival_comparisons_function.R: used to facilitate the display of pairwise comparisons between the clinical endpoints of the cohorts (OS, PFS); 
-B) PSM_survival_function_updated.R: used to perform pairwise propensity score matching (based on the MatchIt package) and comparison of the matched cohorts;
+* Survival_comparisons_function.R: used to facilitate the display of pairwise comparisons between the clinical endpoints of the cohorts (OS, PFS); 
+* PSM_survival_function_updated.R: used to perform pairwise propensity score matching (based on the MatchIt package) and comparison of the matched cohorts;
 
 **Scripts 1, 2, and 3** perform the following for the three cohorts:
 * Data cleaning (i.e. removing duplicates and excluded cases - see methods at the manuscript) and naming harmonization;
@@ -27,7 +27,7 @@ Of note, in the script for the Melanoma cohort, the previous analyses have been 
 * Create of descriptive statistics tables (Table 1, and Supplementary table 1 in the manuscript);
 * Remove of cases with missing data (complete*case analysis);
 * Compute pairwise comparisons in the clinical endpoints of the cohorts using helper script A;
-* Perform propensity score matching and compare clinical endpoints in the matched cohorts;
+* Perform propensity score matching and compare clinical endpoints in the matched cohorts using helper script B;
 * Compute median/max follow up;
 * Calculate the percentage of censoring;
 * Study the differential distribution of complete vs partial responses among the cohorts;
