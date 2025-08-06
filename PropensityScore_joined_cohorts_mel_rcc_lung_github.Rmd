@@ -257,11 +257,10 @@ truncate_pct <- function(x) {
 Baseline_Characteristics_table_Partial_patients$descr <-
   apply(Baseline_Characteristics_table_Partial_patients$descr,MARGIN = c(1,2), truncate_pct)
 
-export2word(Baseline_Characteristics_table_Partial_patients, caption = "Table 1. Summary of the patient characteristics", file = "Table_1.docx") 
-export2word(Baseline_Characteristics_pvals, caption = "Supplementary table 1. Pairwise comparisons among baseline features in the cohorts", file = "Supplementary_table_1.docx") 
+export2word(Baseline_Characteristics_table_Partial_patients, caption = "Table 1. Summary of the patient characteristics", file = "E:/PhD_projects/Realworld/Scripts/Acquired_resistance_RW/Tables/Table_1.docx") 
+export2word(Baseline_Characteristics_pvals, caption = "Supplementary table 1. Pairwise comparisons among baseline features in the cohorts", file = "E:/PhD_projects/Realworld/Scripts/Acquired_resistance_RW/Tables/Supplementary_table_1.docx") 
 
 Baseline_Characteristics_table_Partial_patients
-
 ```
 
 

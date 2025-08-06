@@ -819,7 +819,7 @@ freezePane(wb, "Supp_Table_Cox", firstRow = TRUE)
 # 8) Save file
 saveWorkbook(
   wb,
-  file = "Supplementary_Table_2.xlsx",
+  file = "E:/PhD_projects/Realworld/Scripts/Acquired_resistance_RW/Tables/Supplementary_Table_2.xlsx",
   overwrite = TRUE
 )
 ```
