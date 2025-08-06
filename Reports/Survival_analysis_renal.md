@@ -7,6 +7,8 @@ First created on Feb 2025. Updated on 06 August 2025
 - [Loading Libraries](#loading-libraries)
   - [Pre-processing of data](#pre-processing-of-data)
 - [OS analysis](#os-analysis)
+  - [Multivariate Survival Analysis - only complete
+    cases](#multivariate-survival-analysis---only-complete-cases)
 - [Combined Univariable vs Multivariable Forest Plots -
   OS](#combined-univariable-vs-multivariable-forest-plots---os)
 - [PFS analysis](#pfs-analysis)
@@ -18,7 +20,6 @@ First created on Feb 2025. Updated on 06 August 2025
   PFS](#combined-univariable-vs-multivariable-forest-plots---pfs)
 - [Five-Year Survival Estimates by
   Response](#five-year-survival-estimates-by-response)
-  - [18 Month landmark analysis](#18-month-landmark-analysis)
 
 # Introduction
 
@@ -427,7 +428,14 @@ forest_plot(multiple_uni,
     ## This warning is displayed once every 8 hours.
 
 ![](Survival_analysis_renal_files/figure-gfm/Multiple%20Univariate%20analysis%20-%20Including%20missing%20data-1.png)<!-- -->
-\## Multivariate Survival Analysis - only complete cases
+
+``` r
+#save this for the comparison at the end with the 18 month landmark
+
+hr_OS_resp <-multiple_uni[[length(multiple_uni)]]$coxph
+```
+
+## Multivariate Survival Analysis - only complete cases
 
 ``` r
 # # To remove both (NAs and empty):
@@ -2344,171 +2352,3 @@ p_os
 ```
 
 ![](Survival_analysis_renal_files/figure-gfm/-%205%20year%20KM%20curves-2.png)<!-- -->
-
-## 18 Month landmark analysis
-
-``` r
-#remove all patients with an event before 18 months
-dataDF_18mo <- subset(dataDF, OS_days > 540 & PFS_days > 540)
-
-#reset time
-dataDF_18mo$censor_time_OS <- dataDF_18mo$censor_time_OS-18
-dataDF_18mo$censor_time_PFS <- dataDF_18mo$censor_time_PFS-18
-
-surv_time <- "censor_time_PFS"
-surv_status <- "censor_status_PFS"
-surv_time_label <- "PFS"
-# PFS plot
-results <- lapply(responses, function(resp) {
-  d <- filter(dataDF_18mo, `Objective response` == resp)
-  fit_OS  <- survfit(Surv(censor_time_OS,  censor_status_OS)  ~ 1, data = d)
-  fit_PFS <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1, data = d)
-
-  os_ci  <- get5yr_ci(fit_OS)
-  pfs_ci <- get5yr_ci(fit_PFS)
-
-
-  data.frame(
-    Response       = resp,
-    OS_5yr         = os_ci$Estimate,
-    OS_5yr_Lower   = os_ci$Lower95,
-    OS_5yr_Upper   = os_ci$Upper95,
-    PFS_5yr        = pfs_ci$Estimate,
-    PFS_5yr_Lower  = pfs_ci$Lower95,
-    PFS_5yr_Upper  = pfs_ci$Upper95
-  )
-})
-
-five_year_table <- bind_rows(results) %>%
-  mutate(across(matches("_5yr"), ~ . * 100, .names = "{.col}_pct")) %>%
-  select(Response,
-         OS_5yr_pct, OS_5yr_Lower_pct, OS_5yr_Upper_pct,
-         PFS_5yr_pct, PFS_5yr_Lower_pct, PFS_5yr_Upper_pct,
-         )
-
-
-pfs_lbls <- five_year_table %>%
-  transmute(
-    Response,
-    pfs_label = sprintf("%s: %.0f%% (%.0f–%.0f%%)",
-                        Response, PFS_5yr_pct, PFS_5yr_Lower_pct, PFS_5yr_Upper_pct))
-
-ypos <- c(CR = five_year_table$PFS_5yr_pct[1], PR = five_year_table$PFS_5yr_pct[2])
-
-fit_PFS <- survfit(
-  Surv(censor_time_PFS, censor_status_PFS) ~ Objective_response,
-  data = dataDF_18mo
-)
-names(fit_PFS$strata) <- gsub("Objective_response=", "", names(fit_PFS$strata))
-
-x_max <- 32
-p_pfs <- ggsurvfit(fit_PFS, size = 1.5) +
-    add_censor_mark() +
-    add_confidence_interval()+
-    scale_ggsurvfit() +
-    add_risktable(
-      size            = 7,
-      theme           = theme_risktable_default(axis.text.y.size = 10,
-                                                 plot.title.size  = 20),
-      risktable_stats = "{n.risk}",  # ({cum.event}) removed because of space
-      stats_label = "Number at risk"
-    ) +
-    add_risktable_strata_symbol(symbol = "•", size = 20)+
-    labs(
-      x        = "Months after treatment initiation",
-      y        = "PFS (%)",
-      title = "RCC - Progression-free Survival"
-    ) +
-    scale_x_continuous(breaks = seq(0, x_max, by = 6), limits = c(0, x_max)) +
-    theme_classic() +
-    theme(
-      plot.title      = element_text(hjust = 0.5, size = 25),
-      axis.title.x    = element_text(size = 20),
-      axis.title.y    = element_text(size = 20, margin = margin(t = 0, r = 0, b = 0, l = 0)),
-      axis.text.x     = element_text(size = 15),
-      axis.text.y     = element_text(size = 15),
-      legend.position = "bottom",
-      legend.direction= "horizontal",
-      legend.text     = element_text(size = 18),
-      legend.key.size = unit(10, "bigpts"),
-      legend.title    = element_blank(),
-      plot.margin = unit(c(0,0.2,0,1), 'lines')
-    ) +
-    scale_color_manual(name=c("CR", "PR"),values = c("CR"="#619CFF", "PR"="#F564E3")) +
-    scale_fill_manual(name=c("CR", "PR"),values = c("CR"="#619CFF", "PR"="#F564E3")) +
-   annotate(
-    "text",
-    x     = x_max*0.25,
-    y     = (ypos[names(ypos)]*0.9)/100,
-    label = paste0("5 year PFS for ",pfs_lbls$pfs_label),
-    size  = 10,
-    hjust = 0
-    )
-
-os_lbls <- five_year_table %>%
-  transmute(
-    Response,
-    os_label = sprintf("%s: %.0f%% (%.0f–%.0f%%)",
-                        Response, OS_5yr_pct, OS_5yr_Lower_pct, OS_5yr_Upper_pct))
-
-ypos <- c(CR = five_year_table$OS_5yr_pct[1], PR = five_year_table$OS_5yr_pct[2])
-
-fit_OS <- survfit(
-  Surv(censor_time_OS, censor_status_OS) ~ Objective_response,
-  data = dataDF_18mo
-)
-names(fit_OS$strata) <- gsub("Objective_response=", "", names(fit_OS$strata))
-
-p_os <- ggsurvfit(fit_OS, size = 1.5) +
-    add_censor_mark() +
-    add_confidence_interval()+
-    scale_ggsurvfit() +
-    add_risktable(
-      size            = 7,
-      theme           = theme_risktable_default(axis.text.y.size = 10,
-                                                 plot.title.size  = 20),
-      risktable_stats = "{n.risk}",  # ({cum.event}) removed because of space
-      stats_label = "Number at risk"
-    ) +
-    add_risktable_strata_symbol(symbol = "•", size = 20)+
-    labs(
-      x        = "Months after treatment initiation",
-      y        = "OS (%)",
-      title = "RCC - Overall Survival"
-    ) +
-    scale_x_continuous(breaks = seq(0, x_max, by = 6), limits = c(0, x_max)) +
-    theme_classic() +
-    theme(
-      plot.title      = element_text(hjust = 0.5, size = 25),
-      axis.title.x    = element_text(size = 20),
-      axis.title.y    = element_text(size = 20, margin = margin(t = 0, r = 0, b = 0, l = 0)),
-      axis.text.x     = element_text(size = 15),
-      axis.text.y     = element_text(size = 15),
-      legend.position = "bottom",
-      legend.direction= "horizontal",
-      legend.text     = element_text(size = 18),
-      legend.key.size = unit(10, "bigpts"),
-      legend.title    = element_blank(),
-      plot.margin = unit(c(0,0.2,0,1), 'lines')
-    ) +
-    scale_color_manual(name=c("CR", "PR"),values = c("CR"="#619CFF", "PR"="#F564E3")) +
-    scale_fill_manual(name=c("CR", "PR"),values = c("CR"="#619CFF", "PR"="#F564E3")) +
-   annotate(
-    "text",
-    x     = x_max*0.25,
-    y     = (ypos[names(ypos)]*0.9)/100,
-    label = paste0("5 year OS for ",os_lbls$os_label),
-    size  = 10,
-    hjust = 0
-    )
-
-p_pfs
-```
-
-![](Survival_analysis_renal_files/figure-gfm/landmark%20analysis-1.png)<!-- -->
-
-``` r
-p_os
-```
-
-![](Survival_analysis_renal_files/figure-gfm/landmark%20analysis-2.png)<!-- -->

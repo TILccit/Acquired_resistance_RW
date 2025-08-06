@@ -3976,7 +3976,7 @@ p_pfs <- ggsurvfit(fit_PFS, size = 1.5) +
     labs(
       x        = "Months after treatment initiation",
       y        = "PFS (%)",
-      title = "Melanoma - Progression-free Survival"
+      title = "Melanoma - 18-month landmark analysis (PFS)"
     ) +
     scale_x_continuous(breaks = seq(0, x_max, by = 6), limits = c(0, x_max)) +
     theme_classic() +
@@ -3994,15 +3994,7 @@ p_pfs <- ggsurvfit(fit_PFS, size = 1.5) +
       plot.margin = unit(c(0,0.2,0,1), 'lines')
     ) +
     scale_color_manual(name=c("CR", "PR"),values = c("CR"="#00BA38", "PR"="#00BFC4")) +
-    scale_fill_manual(name=c("CR", "PR"),values = c("CR"="#00BA38", "PR"="#00BFC4")) +
-   annotate(
-    "text",
-    x     = x_max*0.25,
-    y     = (ypos[names(ypos)]*0.9)/100,
-    label = paste0("5 year PFS for ",pfs_lbls$pfs_label),
-    size  = 10,
-    hjust = 0
-    )
+    scale_fill_manual(name=c("CR", "PR"),values = c("CR"="#00BA38", "PR"="#00BFC4")) 
 
 os_lbls <- five_year_table %>%
   transmute(
@@ -4033,7 +4025,7 @@ p_os <- ggsurvfit(fit_OS, size = 1.5) +
     labs(
       x        = "Months after treatment initiation",
       y        = "OS (%)",
-      title = "Melanoma - Overall Survival"
+      title = "Melanoma - 18-month landmark analysis (OS)"
     ) +
     scale_x_continuous(breaks = seq(0, x_max, by = 6), limits = c(0, x_max)) +
     theme_classic() +
@@ -4051,15 +4043,7 @@ p_os <- ggsurvfit(fit_OS, size = 1.5) +
       plot.margin = unit(c(0,0.2,0,1), 'lines')
     ) +
     scale_color_manual(name=c("CR", "PR"),values = c("CR"="#00BA38", "PR"="#00BFC4")) +
-    scale_fill_manual(name=c("CR", "PR"),values = c("CR"="#00BA38", "PR"="#00BFC4")) +
-   annotate(
-    "text",
-    x     = x_max*0.25,
-    y     = (ypos[names(ypos)]*0.9)/100,
-    label = paste0("5 year OS for ",os_lbls$os_label),
-    size  = 10,
-    hjust = 0
-    )
+    scale_fill_manual(name=c("CR", "PR"),values = c("CR"="#00BA38", "PR"="#00BFC4"))
 
 p_pfs
 ```
@@ -4071,5 +4055,39 @@ p_os
 ```
 
 ![](Survival_analysis_melanoma_files/figure-gfm/landmark%20analysis-2.png)<!-- -->
+
+``` r
+hr_OS_resp_18  <- coxph(Surv(censor_time_OS, censor_status_OS) ~ Objective_response, data = dataDF_18mo)
+s_cox_18   <- summary(hr_OS_resp_18)
+# extract HR, CI and p
+hr_18     <- s_cox_18$coefficients[, "exp(coef)"]
+ci_lo_18  <- s_cox_18$conf.int[, "lower .95"]
+ci_hi_18  <- s_cox_18$conf.int[, "upper .95"]
+pval_18   <- s_cox_18$coefficients[, "Pr(>|z|)"]
+hr_lab_18 <- sprintf("HR=%.2f (95%% CI %.2f–%.2f)", hr_18, ci_lo_18, ci_hi_18)
+p_lab_18  <- paste0("p = ", sub("^0\\.", ".", sprintf("%.4f", pval_18)))
+
+print(paste0("18-month landmark OS ",
+             hr_lab_18, " - ", p_lab_18))
+```
+
+    ## [1] "18-month landmark OS HR=3.97 (95% CI 2.65–5.96) - p = .0000"
+
+``` r
+hr_PFS_resp_18  <- coxph(Surv(censor_time_PFS, censor_status_PFS) ~ Objective_response, data = dataDF_18mo)
+s_cox_18   <- summary(hr_PFS_resp_18)
+# extract HR, CI and p
+hr_18     <- s_cox_18$coefficients[, "exp(coef)"]
+ci_lo_18  <- s_cox_18$conf.int[, "lower .95"]
+ci_hi_18  <- s_cox_18$conf.int[, "upper .95"]
+pval_18   <- s_cox_18$coefficients[, "Pr(>|z|)"]
+hr_lab_18 <- sprintf("HR=%.2f (95%% CI %.2f–%.2f)", hr_18, ci_lo_18, ci_hi_18)
+p_lab_18  <- paste0("p = ", sub("^0\\.", ".", sprintf("%.4f", pval_18)))
+
+print(paste0("18-month landmark PFS ",
+             hr_lab_18, " - ", p_lab_18))
+```
+
+    ## [1] "18-month landmark PFS HR=4.38 (95% CI 3.28–5.86) - p = .0000"
 
 \`\`\`
