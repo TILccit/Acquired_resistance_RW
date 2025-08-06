@@ -1,14 +1,19 @@
----
-title: "Survival analysis Lung"
-subtitle: <center> Survival Analysis</center>
-author: "Mario Presti"
-date: '`r paste("First created on Feb 2025. Updated on ", format(Sys.Date(), "%d %B %Y"))`'
-output:
-  github_document:
-    toc: true
-    toc_depth: 5
-always_allow_html: true
----
+Survival analysis Lung
+================
+Mario Presti
+First created on Feb 2025. Updated on 06 August 2025
+
+- [Introduction](#introduction)
+- [Loading Libraries](#loading-libraries)
+  - [Pre-processing of data](#pre-processing-of-data)
+- [OS analysis](#os-analysis)
+- [Combined Univariable vs Multivariable Forest Plots -
+  OS](#combined-univariable-vs-multivariable-forest-plots---os)
+- [PFS analysis](#pfs-analysis)
+- [Combined Univariable vs Multivariable Forest Plots -
+  PFS](#combined-univariable-vs-multivariable-forest-plots---pfs)
+- [Five-Year Survival Estimates by
+  Response](#five-year-survival-estimates-by-response)
 
 # Introduction
 
@@ -16,24 +21,33 @@ Multivariate Survival Analysis on Lung database
 
 # Loading Libraries
 
-```{r setup,warning=F, message=F,eval=TRUE}
+``` r
 # Load required libraries
 library(pacman)
 pacman::p_load(data.table,stringr,tidyverse,ggplot2,MatchIt,survival,survminer,survey,compareGroups, forestmodel, forestplot, openxlsx,kableExtra,ggsurvfit,extrafont,DT,tibble,strex,hrbrthemes,ggstatsplot,reshape,pander,ggrepel,scales,dataMaid,gridExtra,tidytidbits,survivalAnalysis,gtsummary, Cairo,Amelia,officer,mice,naniar)
-
 ```
 
 ## Pre-processing of data
-```{r Data loading and correction,warning=F, message=F,eval=TRUE}
+
+``` r
 setwd("E:/PhD_projects/Realworld/Data/")
 dataDF <- read.xlsx("lung.xlsx")
 
 # Check for duplicates
 any(duplicated(dataDF$patient_id))
+```
 
+    ## [1] FALSE
+
+``` r
 # Remove duplicates
 dataDF <- dataDF[!duplicated(dataDF), ]
 dim(dataDF)
+```
+
+    ## [1] 667  56
+
+``` r
 # 264  49
 
 names(dataDF)[names(dataDF) == 'bedste_respons'] <- 'bor'
@@ -81,11 +95,27 @@ dataDF <- dataDF %>% mutate(across(all_of(categ_feats), as.factor))
 dataDF <- dataDF %>% dplyr::select(all_of(c(colnames(dataDF)[1], OS_time,OS_status, PFS_time,PFS_status, features, features_cancer_spec))) %>% distinct()
 
 dim(dataDF)
+```
+
+    ## [1] 667  13
+
+``` r
 # 264   16
 
 print("Numbers per response")
-table(dataDF$bor)
+```
 
+    ## [1] "Numbers per response"
+
+``` r
+table(dataDF$bor)
+```
+
+    ## 
+    ##  CR  PR 
+    ##  73 594
+
+``` r
 dataDF$PS <- as.factor(dataDF$PS)
 
 
@@ -140,7 +170,42 @@ dataDF[,"CPI Regimen"] <- "Anti-PD1"
 
 ## SUMMARY OF THE DATA
 summary(dataDF)
+```
 
+    ##  RA_Patient-ID        Days_OS              Dead             PFS_days        
+    ##  Length:667         Length:667         Length:667         Length:667        
+    ##  Class :character   Class :character   Class :character   Class :character  
+    ##  Mode  :character   Mode  :character   Mode  :character   Mode  :character  
+    ##                                                                             
+    ##                                                                             
+    ##                                                                             
+    ##                                                                             
+    ##   Progressed            sex      age_1st_treat      Line_correct
+    ##  Length:667         Male  :281   Length:667         First:477   
+    ##  Class :character   Female:386   Class :character   Other:190   
+    ##  Mode  :character                Mode  :character               
+    ##                                                                 
+    ##                                                                 
+    ##                                                                 
+    ##                                                                 
+    ##  Brain_metastases    PS      bor                        Histology  
+    ##  No :593          PS=0:186   CR: 73   Adeno                  :261  
+    ##  Yes: 74          PS≥1:478   PR:594   adeno                  :129  
+    ##                   NA's:  3            Adenocarcinoma         :101  
+    ##                                       Squamous               : 60  
+    ##                                       squamous               : 32  
+    ##                                       Squamous cell carcinoma: 29  
+    ##                                       (Other)                : 55  
+    ##    PDL1_correct   Histology_correct CPI Regimen       
+    ##  PDL1≥50%:546   Nonsquamous:546     Length:667        
+    ##  PDL1<50%: 87   Squamous   :121     Class :character  
+    ##  NA's    : 34                       Mode  :character  
+    ##                                                       
+    ##                                                       
+    ##                                                       
+    ## 
+
+``` r
 names(dataDF)[names(dataDF) == 'Days_OS'] <- 'OS_days'
 names(dataDF)[names(dataDF) == 'Days_PFS'] <- 'PFS_days'
 
@@ -152,8 +217,44 @@ dataDF <- dataDF %>% dplyr::mutate(across(all_of(numeric_feats), as.numeric))
 dataDF <- dataDF %>%  dplyr::mutate(across(all_of(categ_feats), as.character))
 
 print("Summary after releveling some variables: ")
-summary(dataDF)
+```
 
+    ## [1] "Summary after releveling some variables: "
+
+``` r
+summary(dataDF)
+```
+
+    ##  RA_Patient-ID         OS_days          Dead           PFS_days     
+    ##  Length:667         Min.   :  63   Min.   :0.0000   Min.   :  49.0  
+    ##  Class :character   1st Qu.: 670   1st Qu.:0.0000   1st Qu.: 324.0  
+    ##  Mode  :character   Median :1176   Median :1.0000   Median : 661.0  
+    ##                     Mean   :1335   Mean   :0.5832   Mean   : 943.1  
+    ##                     3rd Qu.:1952   3rd Qu.:1.0000   3rd Qu.:1341.5  
+    ##                     Max.   :4163   Max.   :1.0000   Max.   :4163.0  
+    ##    Progressed         sex            age_1st_treat   Line_correct      
+    ##  Min.   :0.0000   Length:667         Min.   :40.00   Length:667        
+    ##  1st Qu.:1.0000   Class :character   1st Qu.:63.00   Class :character  
+    ##  Median :1.0000   Mode  :character   Median :69.00   Mode  :character  
+    ##  Mean   :0.7826                      Mean   :68.45                     
+    ##  3rd Qu.:1.0000                      3rd Qu.:75.00                     
+    ##  Max.   :1.0000                      Max.   :92.00                     
+    ##  Brain_metastases        PS                bor             Histology        
+    ##  Length:667         Length:667         Length:667         Length:667        
+    ##  Class :character   Class :character   Class :character   Class :character  
+    ##  Mode  :character   Mode  :character   Mode  :character   Mode  :character  
+    ##                                                                             
+    ##                                                                             
+    ##                                                                             
+    ##  PDL1_correct         Histology_correct CPI Regimen       
+    ##  Length:667         Nonsquamous:546     Length:667        
+    ##  Class :character   Squamous   :121     Class :character  
+    ##  Mode  :character                       Mode  :character  
+    ##                                                           
+    ##                                                           
+    ## 
+
+``` r
 # rename some of the columns for plotting
 names(dataDF)[names(dataDF) == 'sex'] <- 'Sex'
 names(dataDF)[names(dataDF) == 'age_1st_treat'] <- 'Age'
@@ -177,7 +278,8 @@ dataDF$censor_status_OS <- ifelse(dataDF$OS_days/30 > 60, 0, dataDF$Dead)
 dataDF$censor_time_PFS   <- pmin(dataDF$PFS_days/30, 60)
 dataDF$censor_status_PFS <- ifelse(dataDF$PFS_days/30 > 60, 0, dataDF$Progressed)
 ```
-```{r select descriptive features,warning=F, message=F,eval=TRUE}
+
+``` r
 descr_features <- paste0("`", c(features, "CPI Regimen"), "`", collapse = " + ")
 descr_formula <- as.formula(paste0("~", descr_features))
 
@@ -185,7 +287,8 @@ Baseline_Characteristics_table_Partial_patients <- descrTable(descr_formula , da
 ```
 
 # OS analysis
-```{r Multiple Univariate analysis - Including missing data - OS}
+
+``` r
 surv_time <- "censor_time_OS"
 surv_status <- "censor_status_OS"
 surv_time_label <- "OS"
@@ -248,6 +351,17 @@ multiple_uni <- map(features, function(by){analyse_multivariate(dataDF,
                        covariates = list(by), # covariates expects a list
                        covariate_name_dict = NULL,
                        covariate_label_dict = NULL)})
+```
+
+    ## Warning: There was 1 warning in `mutate()`.
+    ## ℹ In argument: `factor.name = map_chr(coefficient_labels, symbol_substring,
+    ##   call_symbols)`.
+    ## Caused by warning:
+    ## ! `as_logical()` is deprecated as of rlang 0.4.0
+    ## Please use `vctrs::vec_cast()` instead.
+    ## This warning is displayed once every 8 hours.
+
+``` r
 max_cis <- max(sapply(
   multiple_uni,
   function(x) max(x$summary$conf.int, na.rm = TRUE))
@@ -273,8 +387,17 @@ forest_plot(multiple_uni,
             )
 ```
 
+    ## Warning: `as_list()` is deprecated as of rlang 0.4.0
+    ## Please use `vctrs::vec_cast()` instead.
+    ## This warning is displayed once every 8 hours.
 
-```{r Multivariate Survival Analysis - only complete cases - OS, fig.width=10, fig.height=7, warning=FALSE, message=FALSE, eval=TRUE}
+    ## Warning: `switch_type()` is soft-deprecated as of rlang 0.4.0.
+    ## Please use `switch(typeof())` or `switch(my_typeof())` instead.
+    ## This warning is displayed once every 8 hours.
+
+![](Survival_analysis_lung_files/figure-gfm/Multiple%20Univariate%20analysis%20-%20Including%20missing%20data%20-%20OS-1.png)<!-- -->
+
+``` r
 # # To remove both (NAs and empty):
 dataDF_complete <- dataDF %>%
   drop_na() %>%  # Remove NA values
@@ -282,7 +405,11 @@ dataDF_complete <- dataDF %>%
   filter_all(all_vars(trimws(.) != ""))  # Remove strings with only spaces
 
 dim(dataDF_complete)
+```
 
+    ## [1] 631  19
+
+``` r
 multiv_feats_sign <- c()
 for (i in seq_along(features)){
   coef <- as.data.frame(multiple_uni[[i]]$summary$coefficients)
@@ -312,8 +439,73 @@ cox_model_all <- coxph(fmla_all, data = dataDF_complete)
 cox_model_sign <- coxph(fmla_sign, data = dataDF_complete)
 
 summary(cox_model_all)
-summary(cox_model_sign)
+```
 
+    ## Call:
+    ## coxph(formula = fmla_all, data = dataDF_complete)
+    ## 
+    ##   n= 631, number of events= 319 
+    ## 
+    ##                                    coef exp(coef)  se(coef)      z Pr(>|z|)    
+    ## SexMale                        0.319730  1.376756  0.114853  2.784 0.005372 ** 
+    ## Age                            0.033223  1.033781  0.007351  4.519 6.20e-06 ***
+    ## `ECOG Performance Status`PS≥1  0.008374  1.008409  0.127097  0.066 0.947470    
+    ## `Treatment line`Other         -0.001681  0.998320  0.153060 -0.011 0.991236    
+    ## `Brain metastases`Yes          0.622959  1.864437  0.167623  3.716 0.000202 ***
+    ## `Histology subtype`Squamous   -0.048106  0.953033  0.158073 -0.304 0.760878    
+    ## `PD-L1 status`PDL1≥50%        -0.120286  0.886667  0.190356 -0.632 0.527454    
+    ## `Objective response`PR         1.274949  3.578518  0.265421  4.803 1.56e-06 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ##                               exp(coef) exp(-coef) lower .95 upper .95
+    ## SexMale                          1.3768     0.7263    1.0992     1.724
+    ## Age                              1.0338     0.9673    1.0190     1.049
+    ## `ECOG Performance Status`PS≥1    1.0084     0.9917    0.7861     1.294
+    ## `Treatment line`Other            0.9983     1.0017    0.7396     1.348
+    ## `Brain metastases`Yes            1.8644     0.5364    1.3424     2.590
+    ## `Histology subtype`Squamous      0.9530     1.0493    0.6991     1.299
+    ## `PD-L1 status`PDL1≥50%           0.8867     1.1278    0.6106     1.288
+    ## `Objective response`PR           3.5785     0.2794    2.1270     6.020
+    ## 
+    ## Concordance= 0.636  (se = 0.016 )
+    ## Likelihood ratio test= 75.13  on 8 df,   p=5e-13
+    ## Wald test            = 62.77  on 8 df,   p=1e-10
+    ## Score (logrank) test = 66.45  on 8 df,   p=2e-11
+
+``` r
+summary(cox_model_sign)
+```
+
+    ## Call:
+    ## coxph(formula = fmla_sign, data = dataDF_complete)
+    ## 
+    ##   n= 631, number of events= 319 
+    ## 
+    ##                                    coef exp(coef)  se(coef)      z Pr(>|z|)    
+    ## SexMale                        0.321615  1.379354  0.114742  2.803 0.005064 ** 
+    ## Age                            0.032742  1.033284  0.007203  4.545 5.48e-06 ***
+    ## `ECOG Performance Status`PS≥1  0.006900  1.006924  0.126285  0.055 0.956424    
+    ## `Brain metastases`Yes          0.618586  1.856302  0.167284  3.698 0.000217 ***
+    ## `Histology subtype`Squamous   -0.023884  0.976399  0.153788 -0.155 0.876582    
+    ## `Objective response`PR         1.278672  3.591868  0.265309  4.820 1.44e-06 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ##                               exp(coef) exp(-coef) lower .95 upper .95
+    ## SexMale                          1.3794     0.7250    1.1016     1.727
+    ## Age                              1.0333     0.9678    1.0188     1.048
+    ## `ECOG Performance Status`PS≥1    1.0069     0.9931    0.7861     1.290
+    ## `Brain metastases`Yes            1.8563     0.5387    1.3374     2.577
+    ## `Histology subtype`Squamous      0.9764     1.0242    0.7223     1.320
+    ## `Objective response`PR           3.5919     0.2784    2.1354     6.042
+    ## 
+    ## Concordance= 0.636  (se = 0.016 )
+    ## Likelihood ratio test= 74.61  on 6 df,   p=5e-14
+    ## Wald test            = 62.45  on 6 df,   p=1e-11
+    ## Score (logrank) test = 66.09  on 6 df,   p=3e-12
+
+``` r
 forest_model_all <- forest_model(cox_model_all,  # Set x-axis limits
                              exponentiate = TRUE)  # Display hazard ratios on log scale)
 forest_model_sign <- forest_model(cox_model_sign,  # Set x-axis limits
@@ -321,14 +513,19 @@ forest_model_sign <- forest_model(cox_model_sign,  # Set x-axis limits
 
 # Display the plot
 print(forest_model_all)
-print(forest_model_sign)
-
 ```
 
+![](Survival_analysis_lung_files/figure-gfm/Multivariate%20Survival%20Analysis%20-%20only%20complete%20cases%20-%20OS-1.png)<!-- -->
+
+``` r
+print(forest_model_sign)
+```
+
+![](Survival_analysis_lung_files/figure-gfm/Multivariate%20Survival%20Analysis%20-%20only%20complete%20cases%20-%20OS-2.png)<!-- -->
 
 # Combined Univariable vs Multivariable Forest Plots - OS
 
-```{r Combined Univariable vs Multivariable Forest Plots - OS, fig.width=10, fig.height=7, warning=FALSE, message=FALSE, eval=TRUE}
+``` r
 # Prepare empty list to collect rows
 rows <- vector("list", 0)
 
@@ -442,9 +639,462 @@ results_df %>%
   column_spec(6, border_right = TRUE)
 ```
 
+<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
+
+<caption>
+
+Univariable vs Multivariable Cox Results - OS
+</caption>
+
+<thead>
+
+<tr>
+
+<th style="text-align:left;font-weight: bold;text-align: center;">
+
+Covariate
+</th>
+
+<th style="text-align:left;font-weight: bold;text-align: center;">
+
+Level
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Reference
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Univariable HR
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Univariable CI
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Univariable P-value
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Multivariable HR
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Multivariable CI
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Multivariable P-value
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+
+<td style="text-align:left;">
+
+Sex
+</td>
+
+<td style="text-align:left;">
+
+Male
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+Female
+</td>
+
+<td style="text-align:center;">
+
+1.450
+</td>
+
+<td style="text-align:center;">
+
+1.17-1.79
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+5.40e-04
+</td>
+
+<td style="text-align:center;">
+
+1.38
+</td>
+
+<td style="text-align:center;">
+
+1.1-1.73
+</td>
+
+<td style="text-align:center;">
+
+0.00506
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Age
+</td>
+
+<td style="text-align:left;">
+
+Fitted as continuous
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+</td>
+
+<td style="text-align:center;">
+
+1.030
+</td>
+
+<td style="text-align:center;">
+
+1.02-1.05
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+3.20e-06
+</td>
+
+<td style="text-align:center;">
+
+1.03
+</td>
+
+<td style="text-align:center;">
+
+1.02-1.05
+</td>
+
+<td style="text-align:center;">
+
+5.48e-06
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+ECOG Performance Status
+</td>
+
+<td style="text-align:left;">
+
+PS≥1
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+PS=0
+</td>
+
+<td style="text-align:center;">
+
+1.170
+</td>
+
+<td style="text-align:center;">
+
+0.926-1.49
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+1.85e-01
+</td>
+
+<td style="text-align:center;">
+
+1.01
+</td>
+
+<td style="text-align:center;">
+
+0.786-1.29
+</td>
+
+<td style="text-align:center;">
+
+0.956
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Treatment line
+</td>
+
+<td style="text-align:left;">
+
+Other
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+First
+</td>
+
+<td style="text-align:center;">
+
+1.080
+</td>
+
+<td style="text-align:center;">
+
+0.856-1.35
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+5.32e-01
+</td>
+
+<td style="text-align:center;">
+
+</td>
+
+<td style="text-align:center;">
+
+</td>
+
+<td style="text-align:center;">
+
+Excluded from multivariable analysis
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Brain metastases
+</td>
+
+<td style="text-align:left;">
+
+Yes
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+No
+</td>
+
+<td style="text-align:center;">
+
+1.390
+</td>
+
+<td style="text-align:center;">
+
+1.02-1.89
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+3.74e-02
+</td>
+
+<td style="text-align:center;">
+
+1.86
+</td>
+
+<td style="text-align:center;">
+
+1.34-2.58
+</td>
+
+<td style="text-align:center;">
+
+0.000217
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Histology subtype
+</td>
+
+<td style="text-align:left;">
+
+Squamous
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+Nonsquamous
+</td>
+
+<td style="text-align:center;">
+
+1.260
+</td>
+
+<td style="text-align:center;">
+
+0.974-1.64
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+7.77e-02
+</td>
+
+<td style="text-align:center;">
+
+0.976
+</td>
+
+<td style="text-align:center;">
+
+0.722-1.32
+</td>
+
+<td style="text-align:center;">
+
+0.877
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+PD-L1 status
+</td>
+
+<td style="text-align:left;">
+
+PDL1≥50%
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+PDL1\<50%
+</td>
+
+<td style="text-align:center;">
+
+0.884
+</td>
+
+<td style="text-align:center;">
+
+0.649-1.21
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+4.36e-01
+</td>
+
+<td style="text-align:center;">
+
+</td>
+
+<td style="text-align:center;">
+
+</td>
+
+<td style="text-align:center;">
+
+Excluded from multivariable analysis
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Objective response
+</td>
+
+<td style="text-align:left;">
+
+PR
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+CR
+</td>
+
+<td style="text-align:center;">
+
+3.390
+</td>
+
+<td style="text-align:center;">
+
+2.08-5.52
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+1.00e-06
+</td>
+
+<td style="text-align:center;">
+
+3.59
+</td>
+
+<td style="text-align:center;">
+
+2.14-6.04
+</td>
+
+<td style="text-align:center;">
+
+1.44e-06
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
 
 # PFS analysis
-```{r Multiple Univariate analysis - Including missing data - PFS}
+
+``` r
 surv_time <- "censor_time_PFS"
 surv_status <- "censor_status_PFS"
 surv_time_label <- "PFS"
@@ -533,15 +1183,20 @@ forest_plot(multiple_uni,
             )
 ```
 
+![](Survival_analysis_lung_files/figure-gfm/Multiple%20Univariate%20analysis%20-%20Including%20missing%20data%20-%20PFS-1.png)<!-- -->
 
-```{r Multivariate Survival Analysis - only complete cases - PFS, fig.width=10, fig.height=8, warning=FALSE, message=FALSE, eval=TRUE}
+``` r
 dataDF_complete <- dataDF %>%
   drop_na() %>%  # Remove NA values
   filter_all(all_vars(. != "")) %>%  # Remove empty strings
   filter_all(all_vars(trimws(.) != ""))  # Remove strings with only spaces
 
 dim(dataDF_complete)
+```
 
+    ## [1] 631  19
+
+``` r
 multiv_feats_sign <- c()
 for (i in seq_along(features)){
   coef <- as.data.frame(multiple_uni[[i]]$summary$coefficients)
@@ -571,8 +1226,73 @@ cox_model_all <- coxph(fmla_all, data = dataDF_complete)
 cox_model_sign <- coxph(fmla_sign, data = dataDF_complete)
 
 summary(cox_model_all)
-summary(cox_model_sign)
+```
 
+    ## Call:
+    ## coxph(formula = fmla_all, data = dataDF_complete)
+    ## 
+    ##   n= 631, number of events= 450 
+    ## 
+    ##                                    coef exp(coef)  se(coef)      z Pr(>|z|)    
+    ## SexMale                        0.172866  1.188707  0.097758  1.768  0.07701 .  
+    ## Age                            0.017655  1.017812  0.005966  2.959  0.00308 ** 
+    ## `ECOG Performance Status`PS≥1 -0.086098  0.917504  0.106797 -0.806  0.42013    
+    ## `Treatment line`Other         -0.302345  0.739083  0.134381 -2.250  0.02445 *  
+    ## `Brain metastases`Yes          0.526161  1.692422  0.145188  3.624  0.00029 ***
+    ## `Histology subtype`Squamous   -0.020813  0.979402  0.133937 -0.155  0.87651    
+    ## `PD-L1 status`PDL1≥50%        -0.351837  0.703395  0.163228 -2.155  0.03112 *  
+    ## `Objective response`PR         1.544903  4.687516  0.225251  6.859 6.96e-12 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ##                               exp(coef) exp(-coef) lower .95 upper .95
+    ## SexMale                          1.1887     0.8413    0.9814    1.4397
+    ## Age                              1.0178     0.9825    1.0060    1.0298
+    ## `ECOG Performance Status`PS≥1    0.9175     1.0899    0.7442    1.1311
+    ## `Treatment line`Other            0.7391     1.3530    0.5679    0.9618
+    ## `Brain metastases`Yes            1.6924     0.5909    1.2733    2.2495
+    ## `Histology subtype`Squamous      0.9794     1.0210    0.7533    1.2734
+    ## `PD-L1 status`PDL1≥50%           0.7034     1.4217    0.5108    0.9686
+    ## `Objective response`PR           4.6875     0.2133    3.0145    7.2892
+    ## 
+    ## Concordance= 0.613  (se = 0.014 )
+    ## Likelihood ratio test= 106.8  on 8 df,   p=<2e-16
+    ## Wald test            = 77.26  on 8 df,   p=2e-13
+    ## Score (logrank) test = 87.25  on 8 df,   p=2e-15
+
+``` r
+summary(cox_model_sign)
+```
+
+    ## Call:
+    ## coxph(formula = fmla_sign, data = dataDF_complete)
+    ## 
+    ##   n= 631, number of events= 450 
+    ## 
+    ##                                  coef exp(coef)  se(coef)      z Pr(>|z|)    
+    ## SexMale                      0.164343  1.178618  0.097284  1.689 0.091160 .  
+    ## Age                          0.019448  1.019638  0.005913  3.289 0.001005 ** 
+    ## `Brain metastases`Yes        0.496353  1.642720  0.144735  3.429 0.000605 ***
+    ## `Histology subtype`Squamous  0.003778  1.003785  0.132839  0.028 0.977310    
+    ## `PD-L1 status`PDL1≥50%      -0.146702  0.863552  0.135422 -1.083 0.278680    
+    ## `Objective response`PR       1.540276  4.665878  0.225008  6.845 7.63e-12 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ##                             exp(coef) exp(-coef) lower .95 upper .95
+    ## SexMale                        1.1786     0.8485    0.9740     1.426
+    ## Age                            1.0196     0.9807    1.0079     1.032
+    ## `Brain metastases`Yes          1.6427     0.6087    1.2370     2.182
+    ## `Histology subtype`Squamous    1.0038     0.9962    0.7737     1.302
+    ## `PD-L1 status`PDL1≥50%         0.8636     1.1580    0.6622     1.126
+    ## `Objective response`PR         4.6659     0.2143    3.0020     7.252
+    ## 
+    ## Concordance= 0.612  (se = 0.014 )
+    ## Likelihood ratio test= 100.5  on 6 df,   p=<2e-16
+    ## Wald test            = 71.48  on 6 df,   p=2e-13
+    ## Score (logrank) test = 81.41  on 6 df,   p=2e-15
+
+``` r
 forest_model_all <- forest_model(cox_model_all,  # Set x-axis limits
                              exponentiate = TRUE)  # Display hazard ratios on log scale)
 forest_model_sign <- forest_model(cox_model_sign,  # Set x-axis limits
@@ -580,13 +1300,19 @@ forest_model_sign <- forest_model(cox_model_sign,  # Set x-axis limits
 
 # Display the plot
 print(forest_model_all)
-print(forest_model_sign)
-
 ```
 
+![](Survival_analysis_lung_files/figure-gfm/Multivariate%20Survival%20Analysis%20-%20only%20complete%20cases%20-%20PFS-1.png)<!-- -->
+
+``` r
+print(forest_model_sign)
+```
+
+![](Survival_analysis_lung_files/figure-gfm/Multivariate%20Survival%20Analysis%20-%20only%20complete%20cases%20-%20PFS-2.png)<!-- -->
 
 # Combined Univariable vs Multivariable Forest Plots - PFS
-```{r Combined Univariable vs Multivariable Forest Plots - PFS, fig.width=10, fig.height=7, warning=FALSE, message=FALSE, eval=TRUE}
+
+``` r
 # Prepare empty list to collect rows
 rows <- vector("list", 0)
 
@@ -675,7 +1401,22 @@ knitr::kable(
   caption = "Univariable vs Multivariable Cox Results",
   row.names = FALSE
 )
+```
 
+| Covariate | Level | Reference | Univariable HR | Univariable CI | Univariable P-value | Multivariable HR | Multivariable CI | Multivariable P-value |
+|:---|:---|:---|---:|:---|---:|:---|:---|:---|
+| Sex | Male | Female | 1.240 | 1.04-1.49 | 0.017 | 1.18 | 0.974-1.43 | 0.0912 |
+| Age | Fitted as continuous |  | 1.020 | 1.01-1.03 | 0.000 | 1.02 | 1.01-1.03 | 0.00101 |
+| ECOG Performance Status | PS≥1 | PS=0 | 1.020 | 0.834-1.24 | 0.858 |  |  | Excluded from multivariable analysis |
+| Treatment line | Other | First | 0.900 | 0.738-1.1 | 0.296 |  |  | Excluded from multivariable analysis |
+| Brain metastases | Yes | No | 1.300 | 0.992-1.7 | 0.057 | 1.64 | 1.24-2.18 | 0.000605 |
+| Histology subtype | Squamous | Nonsquamous | 1.220 | 0.976-1.53 | 0.080 | 1 | 0.774-1.3 | 0.977 |
+| PD-L1 status | PDL1≥50% | PDL1\<50% | 0.836 | 0.645-1.08 | 0.176 | 0.864 | 0.662-1.13 | 0.279 |
+| Objective response | PR | CR | 4.450 | 2.92-6.77 | 0.000 | 4.67 | 3-7.25 | 7.63e-12 |
+
+Univariable vs Multivariable Cox Results
+
+``` r
 n_cols <- ncol(results_df)
 
 # align: left for first two, center for the rest
@@ -701,7 +1442,462 @@ results_df %>%
   # add vertical lines right of col 3 and col 6
   column_spec(3, border_right = TRUE) %>%
   column_spec(6, border_right = TRUE)
+```
 
+<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
+
+<caption>
+
+Univariable vs Multivariable Cox Results - PFS
+</caption>
+
+<thead>
+
+<tr>
+
+<th style="text-align:left;font-weight: bold;text-align: center;">
+
+Covariate
+</th>
+
+<th style="text-align:left;font-weight: bold;text-align: center;">
+
+Level
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Reference
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Univariable HR
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Univariable CI
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Univariable P-value
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Multivariable HR
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Multivariable CI
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Multivariable P-value
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+
+<td style="text-align:left;">
+
+Sex
+</td>
+
+<td style="text-align:left;">
+
+Male
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+Female
+</td>
+
+<td style="text-align:center;">
+
+1.240
+</td>
+
+<td style="text-align:center;">
+
+1.04-1.49
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+0.017
+</td>
+
+<td style="text-align:center;">
+
+1.18
+</td>
+
+<td style="text-align:center;">
+
+0.974-1.43
+</td>
+
+<td style="text-align:center;">
+
+0.0912
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Age
+</td>
+
+<td style="text-align:left;">
+
+Fitted as continuous
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+</td>
+
+<td style="text-align:center;">
+
+1.020
+</td>
+
+<td style="text-align:center;">
+
+1.01-1.03
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+0.000
+</td>
+
+<td style="text-align:center;">
+
+1.02
+</td>
+
+<td style="text-align:center;">
+
+1.01-1.03
+</td>
+
+<td style="text-align:center;">
+
+0.00101
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+ECOG Performance Status
+</td>
+
+<td style="text-align:left;">
+
+PS≥1
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+PS=0
+</td>
+
+<td style="text-align:center;">
+
+1.020
+</td>
+
+<td style="text-align:center;">
+
+0.834-1.24
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+0.858
+</td>
+
+<td style="text-align:center;">
+
+</td>
+
+<td style="text-align:center;">
+
+</td>
+
+<td style="text-align:center;">
+
+Excluded from multivariable analysis
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Treatment line
+</td>
+
+<td style="text-align:left;">
+
+Other
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+First
+</td>
+
+<td style="text-align:center;">
+
+0.900
+</td>
+
+<td style="text-align:center;">
+
+0.738-1.1
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+0.296
+</td>
+
+<td style="text-align:center;">
+
+</td>
+
+<td style="text-align:center;">
+
+</td>
+
+<td style="text-align:center;">
+
+Excluded from multivariable analysis
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Brain metastases
+</td>
+
+<td style="text-align:left;">
+
+Yes
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+No
+</td>
+
+<td style="text-align:center;">
+
+1.300
+</td>
+
+<td style="text-align:center;">
+
+0.992-1.7
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+0.057
+</td>
+
+<td style="text-align:center;">
+
+1.64
+</td>
+
+<td style="text-align:center;">
+
+1.24-2.18
+</td>
+
+<td style="text-align:center;">
+
+0.000605
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Histology subtype
+</td>
+
+<td style="text-align:left;">
+
+Squamous
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+Nonsquamous
+</td>
+
+<td style="text-align:center;">
+
+1.220
+</td>
+
+<td style="text-align:center;">
+
+0.976-1.53
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+0.080
+</td>
+
+<td style="text-align:center;">
+
+1
+</td>
+
+<td style="text-align:center;">
+
+0.774-1.3
+</td>
+
+<td style="text-align:center;">
+
+0.977
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+PD-L1 status
+</td>
+
+<td style="text-align:left;">
+
+PDL1≥50%
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+PDL1\<50%
+</td>
+
+<td style="text-align:center;">
+
+0.836
+</td>
+
+<td style="text-align:center;">
+
+0.645-1.08
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+0.176
+</td>
+
+<td style="text-align:center;">
+
+0.864
+</td>
+
+<td style="text-align:center;">
+
+0.662-1.13
+</td>
+
+<td style="text-align:center;">
+
+0.279
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Objective response
+</td>
+
+<td style="text-align:left;">
+
+PR
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+CR
+</td>
+
+<td style="text-align:center;">
+
+4.450
+</td>
+
+<td style="text-align:center;">
+
+2.92-6.77
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+0.000
+</td>
+
+<td style="text-align:center;">
+
+4.67
+</td>
+
+<td style="text-align:center;">
+
+3-7.25
+</td>
+
+<td style="text-align:center;">
+
+7.63e-12
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
+``` r
 wb <- createWorkbook()
 addWorksheet(wb, "Supp_Table_Cox")
 
@@ -772,13 +1968,9 @@ saveWorkbook(
 )
 ```
 
-
-
-
-
 # Five-Year Survival Estimates by Response
 
-```{r five_year_survival_CI, warning=FALSE, message=FALSE}
+``` r
 library(survival)
 library(dplyr)
 
@@ -833,7 +2025,14 @@ five_year_table <- bind_rows(results) %>%
 print(five_year_table)
 ```
 
-```{r - 5 year KM curves, fig.width=10, fig.height=8}
+    ##   Response OS_5yr_pct OS_5yr_Lower_pct OS_5yr_Upper_pct PFS_5yr_pct
+    ## 1       CR   74.90839         65.14914         86.12957    66.54732
+    ## 2       PR   39.94039         35.94781         44.37642    18.62724
+    ##   PFS_5yr_Lower_pct PFS_5yr_Upper_pct
+    ## 1          56.17685          78.83222
+    ## 2          15.55600          22.30483
+
+``` r
 # pull out labels from five_year_table
 x_max=60
 rownames(five_year_table) <- five_year_table$Response
@@ -902,8 +2101,12 @@ p_os <- ggsurvfit(fit_OS, size = 1.5) +
     size  = 10,
     hjust = 0
     )
+```
 
+    ## Scale for x is already present.
+    ## Adding another scale for x, which will replace the existing scale.
 
+``` r
 # PFS plot
 ypos <- c(CR = five_year_table$PFS_5yr_pct[1], PR = five_year_table$PFS_5yr_pct[2])
 
@@ -955,14 +2158,29 @@ p_pfs <- ggsurvfit(fit_PFS, size = 1.5) +
     size  = 10,
     hjust = 0
     )
+```
 
+    ## Scale for x is already present.
+    ## Adding another scale for x, which will replace the existing scale.
+
+``` r
 p_pfs
+```
+
+![](Survival_analysis_lung_files/figure-gfm/-%205%20year%20KM%20curves-1.png)<!-- -->
+
+``` r
 p_os
 ```
 
+    ## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
+    ## font family not found in Windows font database
+
+![](Survival_analysis_lung_files/figure-gfm/-%205%20year%20KM%20curves-2.png)<!-- -->
 
 18 Month landmark analysis
-```{r landmark analysis, warning=FALSE, message=FALSE, fig.width=10, fig.height=8}
+
+``` r
 #remove all patients with an event before 18 months
 dataDF_18mo <- subset(dataDF, OS_days > 540 & PFS_days > 540)
 
@@ -1118,7 +2336,12 @@ p_os <- ggsurvfit(fit_OS, size = 1.5) +
     )
 
 p_pfs
+```
+
+![](Survival_analysis_lung_files/figure-gfm/landmark%20analysis-1.png)<!-- -->
+
+``` r
 p_os
 ```
 
-
+![](Survival_analysis_lung_files/figure-gfm/landmark%20analysis-2.png)<!-- -->

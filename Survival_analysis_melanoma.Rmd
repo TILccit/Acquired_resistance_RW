@@ -4,16 +4,10 @@ subtitle: <center> Survival Analysis</center>
 author: "Mario Presti"
 date: '`r paste("First created on Feb 2025. Updated on ", format(Sys.Date(), "%d %B %Y"))`'
 output:
-  html_document:
-    css: style.css
-    code_folding: hide
-    fig_caption: yes
-    toc: yes
-    toc_float:
-      collapsed: true
-      smooth_scroll: true
+  github_document:
+    toc: true
     toc_depth: 5
-    number_sections: true
+always_allow_html: true
 ---
 
 # Introduction
