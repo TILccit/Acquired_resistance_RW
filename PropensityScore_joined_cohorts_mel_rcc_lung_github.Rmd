@@ -1,0 +1,1064 @@
+---
+title: "Propensity Scores Calculation and Survival Analysis"
+subtitle: <center> Parial responders </center>
+author: "Mario Presti"
+date: '`r paste("First created on May 2025 Updated on ", format(Sys.Date(), "%d %B %Y"))`'
+output:
+  html_document:
+    css: style.css
+    code_folding: hide
+    fig_caption: yes
+    toc: yes
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+    toc_depth: 5
+    number_sections: true
+---
+
+# Introduction
+
+This analysis investigates propensity score matching in patients based on PD-L1 expression and other clinical parameters.
+
+# Loading Libraries
+
+```{r dataLoad,warning=F, message=F,eval=TRUE}
+# Load required libraries
+library(data.table)
+library(stringr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(MatchIt)
+library(survival)
+library(survminer)
+library(survey)
+library(compareGroups)
+library(cobalt)
+library(ggsurvfit)
+library(survivalAnalysis)
+library(patchwork)
+library(broom)
+library(ggrepel)
+library(openxlsx)
+library(kableExtra)
+
+source("PSM_survival_function_updated.R")
+source("Survival_comparisons_function.R")
+
+#this is to prevent problems with previous r versions
+Tailcall <- function(f, x, char, symmetrical, recursive) {
+  f(x, char, symmetrical, recursive)
+}
+```
+## Pre-processing of data
+
+* Check that all columns have no spaces etc, especially character columns, 
+* transform character columns to factors. 
+* Check if all factors are ok.
+* Check numerical columns.
+
+#Joining melanoma and RCC datasets, plus data cleaning
+```{r Joining, message=F, warning=F}
+setwd("E:/PhD_projects/Realworld/Data")
+dataMel <- read.csv("Melanoma_data_polished.csv",check.names = F)
+dataLung <- read.csv("Lung_data_polished.csv",check.names = F)
+dataMel$Tumor <- "Melanoma"
+dataRCC <- read.csv("RCC_data_polished.csv",check.names = F)
+dataRCC$Tumor <- "RCC"
+dataLung$Tumor <- "NSCLC"
+common_cols <- intersect(names(dataMel), names(dataRCC))
+common_cols <- intersect(names(dataLung),common_cols)
+dataDF <- dataMel %>%
+  bind_rows(
+    dataRCC, dataLung)
+dataDF <- dataDF[,common_cols]
+
+colnames(dataDF) <- gsub("\\.", " ", colnames(dataDF))
+
+names(dataDF)[names(dataDF) == 'Objective response'] <- 'Objective_response'
+
+xpos <-  60 
+y_cr <- 0.85  # height for the CR p‐value
+y_pr <- 0.30  # height for the PR p‐value
+
+```
+
+We first need to define which columns we want as character (categorical), and which need to be numerical. Sometimes things get messed up with excel files.
+
+```{r data cleaning,warning=F, message=F,eval=TRUE}
+# Define caliper 
+caliper = 0.2
+
+cat(paste0("Your will use a caliper of ", print(caliper)))
+
+# Check for duplicates
+any(duplicated(dataDF$record_id))
+
+# Remove duplicates
+dataDF <- dataDF[!duplicated(dataDF), ]
+dim(dataDF)
+
+features <- c("Sex", "Age","Treatment line","Brain metastases", "ECOG Performance Status", 
+              "Objective_response","Tumor")
+
+## Define which columns include survival data
+OS_time <- c("OS_days")
+OS_status <- c("Dead")
+
+PFS_time <- c("PFS_days")
+PFS_status <- c("Progressed")
+
+## DEFINE WHICH COLUMNS ARE CATEGORICAL
+categ_feats <-c("Sex", "Treatment line", "Brain metastases", "ECOG Performance Status", "Objective_response","Tumor")
+
+## DEFINE WHICH COLUMNS ARE NUMERICAL
+# we also add the status and time columns
+numeric_feats <- c("OS_days", "Dead","PFS_days","Progressed","Age")
+
+OS_time <- gsub(" ","_",OS_time)
+OS_status <- gsub(" ","_",OS_status)
+PFS_time <- gsub(" ","_",PFS_time)
+PFS_status <- gsub(" ","_",PFS_status)
+
+
+## MAKE SURE THERE ARE NO BLANKS ANYWHERE IN THE DATA
+## Find non-Numeric columns
+num_cols <- unlist(lapply(dataDF, is.numeric))
+
+### MAKE SURE THAT THE COLUMNS ARE IN THE CORRECT FORMAT NEEDED FOR ANALYSIS.
+## Numeric columns
+dataDF <- dataDF %>% mutate(across(all_of(numeric_feats), as.numeric))
+
+## Categorical
+dataDF <- dataDF %>% mutate(across(all_of(categ_feats), as.character))
+
+#Transform character columns to categorical, to have the different levels
+dataDF <- dataDF %>% mutate(across(all_of(categ_feats), as.factor))
+dataDF <- dataDF %>% select(all_of(c(colnames(dataDF)[1], OS_time,OS_status, PFS_time,PFS_status, features, "CPI Regimen"))) %>% distinct()
+
+print("Numbers per response")
+table(dataDF$bor_text)
+
+print("Numbers per treatment")
+table(dataDF$regime_correct)
+
+# Days to Months
+dataDF$OS_months <- dataDF$OS_days /30.44
+dataDF$PFS_months <- dataDF$PFS_days /30.44
+
+## SUMMARY OF THE DATA
+summary(dataDF)
+
+names(dataDF)[names(dataDF) == 'Objective_response'] <- 'DOR'
+features <- c("Sex", "Age","Treatment line","Brain metastases", "ECOG Performance Status", 
+              "DOR","Tumor")
+
+dataDF_unfilter<-dataDF
+
+dataDF <- dataDF %>%
+  mutate(across(
+    where(is.character),
+    ~ str_replace_all(., "\\bNA\\b", "")  
+    )) %>%
+  filter(if_all(everything(), ~ !is.na(.)))
+```
+# Baseline Characteristics of Patients Before Propensity Score Matching
+
+```{r baseline table,warning=F, message=F,eval=TRUE}
+common_cols <- intersect(names(dataMel), names(dataRCC))
+lung_specific_cols <- setdiff(names(dataLung),common_cols)
+melanoma_specific_cols <- setdiff(names(dataMel),c(common_cols, "Dead_Mel", "PS"))
+renal_specific_cols <- setdiff(names(dataRCC),c(common_cols, "Smoking status")) #removing smoking status as it's only present in renal and not the others
+
+descr_features <- paste0("`", c(features[ features != "Tumor" ], "CPI Regimen"), "`", collapse = " + ")
+descr_features <- gsub("DOR","Objective Response",descr_features)
+descr_formula <- as.formula(paste0("Tumor ~", descr_features))
+
+dataDF_unfilter$Tumor <- factor(dataDF_unfilter$Tumor, levels = c("Melanoma", "NSCLC", "RCC"))
+
+dataDF_extended <- full_join(dataDF_unfilter,dataMel[,c("record_id",melanoma_specific_cols)],
+                             by="record_id")
+dataDF_extended <- full_join(dataDF_extended,dataLung[,c("record_id",lung_specific_cols)],
+                              by="record_id")
+dataDF_extended <- full_join(dataDF_extended,dataRCC[,c("record_id",renal_specific_cols)],,
+                              by="record_id")
+
+#some little adjustments here
+names(dataDF_extended)[names(dataDF_extended) == 'Histology subtype'] <- 'NSCLC subtype'
+names(dataLung)[names(dataLung) == 'Histology subtype'] <- 'NSCLC subtype'
+lung_specific_cols[which(lung_specific_cols == 'Histology subtype')] <- 'NSCLC subtype'
+names(dataDF_extended)[names(dataDF_extended) == 'DOR'] <- 'Objective Response'
+
+descr_features_ext <- paste0("`", c(features[ features != "Tumor" ],"CPI Regimen",
+                                    melanoma_specific_cols,lung_specific_cols,renal_specific_cols), "`", collapse = " + ")
+descr_features_ext <- gsub("DOR","Objective Response",descr_features_ext)
+descr_formula_ext <- as.formula(paste0("Tumor ~", descr_features_ext))
+
+#transform all categorical variables into factors
+
+#now a bit of clean up of the table to prevent "missing = 100%" where is not needed, i.e. have the % of missingness only in tumor-specific columns actually missing data
+na_counts_all <- colSums(is.na(dataDF_unfilter))
+# names of columns with at least one NA
+
+na_counts_mel <- colSums(is.na(dataMel[,melanoma_specific_cols]))
+# names of columns with at least one NA
+cols_with_na_mel <- names(na_counts_mel)[na_counts_mel > 0]
+
+na_counts_rcc <- colSums(is.na(dataRCC[,renal_specific_cols]))
+# names of columns with at least one NA
+cols_with_na_rcc <- names(na_counts_rcc)[na_counts_rcc > 0]
+
+na_counts_lung <- colSums(is.na(dataLung[,lung_specific_cols]))
+# names of columns with at least one NA
+cols_with_na_lung <- names(na_counts_lung)[na_counts_lung > 0]
+
+cols_with_na <- c(cols_with_na_lung, cols_with_na_mel, cols_with_na_rcc)
+
+dataDF_extended <- dataDF_extended %>%
+  mutate(across(all_of(cols_with_na), as.factor))
+
+Baseline_Characteristics_table_Partial_patients <- descrTable(descr_formula_ext , data = dataDF_extended,include.miss=T, method=2, lab.missing = "Missing data", show.p.mul=T, show.p.overall=F)
+
+Baseline_Characteristics_pvals <- descrTable(descr_formula , data = dataDF_extended,include.miss=T, method=2, lab.missing = "Missing data", show.p.mul=T, show.p.overall=F)
+Baseline_Characteristics_pvals$descr <-  Baseline_Characteristics_table_Partial_patients$descr[,4:6]
+
+Baseline_Characteristics_table_Partial_patients$descr <- Baseline_Characteristics_table_Partial_patients$descr[,1:3]
+#Baseline_Characteristics_table_Partial_patients, file = file.path(path.expand(result), "Baseline_Characteristics_table_all_patients.docx"))
+index_na <- which(sub(":.*$", "", rownames(Baseline_Characteristics_table_Partial_patients$descr)) %in% cols_with_na)
+descr <- Baseline_Characteristics_table_Partial_patients$descr
+
+# compute mask on subset
+sub <- descr[index_na, , drop = FALSE]
+mask <- str_detect(
+  sub,
+  regex("^\\s*(?:0 \\(\\s*0(?:\\.0+)?%\\s*\\)|\\d+ \\(\\s*100(?:\\.0+)?%\\s*\\))$")
+)
+
+# embed into full-size mask
+full_mask <- matrix(FALSE, nrow = nrow(descr), ncol = ncol(descr))
+full_mask[index_na, ] <- mask
+
+# assign NA where TRUE
+descr[full_mask] <- "NA"
+Baseline_Characteristics_table_Partial_patients$descr <- descr
+
+
+Baseline_Characteristics_table_Partial_patients$descr <- gsub("0 *\\(\\.?%\\)", "NA", Baseline_Characteristics_table_Partial_patients$descr)
+
+truncate_pct <- function(x) {
+  str_replace_all(x, "\\(([0-9]+\\.?[0-9]*)%\\)", function(m) {
+    num <- as.numeric(sub("^\\((.*)%\\)$", "\\1", m))
+    truncated <- floor(num * 10) / 10
+    sprintf("(%0.1f%%)", truncated)
+  })
+}
+
+Baseline_Characteristics_table_Partial_patients$descr <-
+  apply(Baseline_Characteristics_table_Partial_patients$descr,MARGIN = c(1,2), truncate_pct)
+
+export2word(Baseline_Characteristics_table_Partial_patients, caption = "Table 1. Summary of the patient characteristics", file = "Table_1.docx") 
+export2word(Baseline_Characteristics_pvals, caption = "Supplementary table 1. Pairwise comparisons among baseline features in the cohorts", file = "Supplementary_table_1.docx") 
+
+Baseline_Characteristics_table_Partial_patients
+
+```
+
+
+
+
+
+
+
+
+
+
+# Survival analysis using unmatched patient data
+## Overall survival
+### Administrative censoring
+```{r admin censoring, warning=FALSE, message=FALSE, fig.width=15, fig.height=8, eval=TRUE}
+# Administrative censoring at 60 months
+dataDF$censor_time_OS   <- pmin(dataDF$OS_months, 60)
+dataDF$censor_status_OS <- ifelse(dataDF$OS_months > 60, 0, dataDF$Dead)
+```
+
+### Combined survival analysis OS
+```{r Survival analysis OS, warning=FALSE, message=FALSE, fig.width=15, fig.height=8, eval=FALSE}
+# Compute the Kaplan-Meier model
+fit_overall = survfit(Surv(dataDF$censor_time_OS, dataDF$censor_status_OS) ~ Tumor+DOR, data=dataDF)
+print(fit_overall)
+
+# Modify the names of the strata to remove "regime_correct="
+names(fit_overall$strata) <- sub("Tumor=", "", names(fit_overall$strata))
+names(fit_overall$strata) <- sub("DOR=", "", names(fit_overall$strata))
+
+# Cox model for HR & CI
+dataDF$Tumor <- relevel(dataDF$Tumor, ref = "Melanoma")
+dataDF$DOR <- relevel(dataDF$DOR, ref = "CR")
+fit_cox <- coxph(Surv(dataDF$censor_time_OS, dataDF$censor_status_OS) ~ Tumor+DOR, data=dataDF)
+s_cox   <- summary(fit_cox)
+hr      <- s_cox$coefficients[, "exp(coef)"]
+ci_lo   <- s_cox$conf.int[, "lower .95"]
+ci_hi   <- s_cox$conf.int[, "upper .95"]
+hr_label <- sprintf("HR=%.2f (95%% CI %.2f–%.2f)",
+                        hr, ci_lo, ci_hi)
+
+# Pull out the table of HRs+CIs
+tidy_cox <- broom::tidy(
+  fit_cox,
+  exponentiate = TRUE,  # get HRs
+  conf.int     = TRUE   # get 95% CIs
+)
+
+# Prepare input for forest_plot.df()
+tbl <- tidy_cox %>%
+  mutate(
+    # identify which factor each term belongs to:
+    factor.name  = case_when(
+      startsWith(term, "Tumor")              ~ "Tumor",
+      startsWith(term, "DOR") ~ "DOR",
+      TRUE                                   ~ NA_character_
+    ),
+    # pull out the level name by dropping the var name prefix
+    factor.value = mapply(function(t, f) substring(t, nchar(f) + 1),
+                          term, factor.name,
+                          USE.NAMES = FALSE),
+    # define the rest of the required columns:
+    survivalResult = "OS",
+    endpoint       = "OS_months",
+    factor.id      = paste0(factor.name, ":", factor.value),
+    HR             = estimate,
+    Lower_CI       = conf.low,
+    Upper_CI       = conf.high,
+    p              = p.value,
+    n              = NA_integer_,
+    subgroup_n     = NA_integer_
+  ) %>%
+  select(survivalResult, endpoint,
+         factor.name, factor.value, factor.id,
+         HR, Lower_CI, Upper_CI, p,
+         n, subgroup_n)
+
+# Build the reference‐level rows dynamically
+refs <- tbl %>%
+  distinct(factor.name) %>%
+  rowwise() %>%
+  dplyr::mutate(
+    # all levels of this factor:
+    all_lvls = list(levels(dataDF[[factor.name]])),
+    # those present in the Cox output:
+    used_lvls = list(tbl$factor.value[tbl$factor.name == factor.name]),
+    # the one leftover is the reference:
+    factor.value = setdiff(all_lvls[[1]], used_lvls[[1]]),
+    survivalResult = tbl$survivalResult[1],
+    endpoint       = tbl$endpoint[1],
+    factor.id      = paste0(factor.name, ":", factor.value),
+    HR             = 1,
+    Lower_CI       = 1,
+    Upper_CI       = 1,
+    p              = NA_real_,
+    n              = sum(dataDF[[factor.name]] == factor.value),
+    subgroup_n     = n
+  ) %>%
+  ungroup() %>%
+  select(names(tbl))
+
+# Combine REF + non‐REF, ordering by factor.name
+full_tbl <- bind_rows(refs, tbl) %>%
+  arrange(factor.name,
+          factor.value)
+
+
+OVS_all <- ggsurvfit(fit_overall, size = 1.5)
+p_km <- OVS_all +
+  add_censor_mark() +
+  add_risktable(
+    size = 5,
+    theme = theme_risktable_default(
+      axis.text.y.size = 15,
+      plot.title.size  = 15
+    ),
+    risktable_stats = "{n.risk} ({cum.event})"
+  ) +
+  labs(
+    x     = "Months",
+    y     = "Survival probability (%)",
+    title = "Overall Survival before propensity matching"
+  ) +
+  xlim(0, 60) +
+  scale_x_continuous(breaks = seq(0, 60, by = 12)) +
+  scale_y_continuous(breaks = c(0, .25, .5, .75, 1.0), limits = c(0, 1)) +
+  coord_cartesian(xlim = c(0, 70), expand = FALSE) +
+  theme_classic() +
+  theme(
+    plot.title        = element_text(hjust = 0.5, size = 18),
+    axis.title.x      = element_text(size = 20),
+    axis.title.y      = element_text(size = 20),
+    axis.text.x       = element_text(size = 15),
+    axis.text.y       = element_text(size = 15),
+    legend.position   = "bottom",
+    legend.direction  = "horizontal",
+    legend.text       = element_text(size = 18),
+    legend.key.size   = unit(10, "bigpts"),
+    legend.title      = element_blank()
+  )
+
+HR_x_limits <- c(min(full_tbl$HR), max(full_tbl$HR)) * c(1/1.5, 1.5)
+HR_x_breaks <- round(10^pretty(log10(HR_x_limits), n = 7),digits = 1)
+
+full_tbl$factor.id <- sub("Tumor:", "", full_tbl$factor.id)
+full_tbl$factor.id <- sub("DOR:", "", full_tbl$factor.id)
+## Forest plot panel with REF included
+p_forest2 <- survivalAnalysis:::forest_plot.df(
+  full_tbl,
+  labels_displayed = c("factor"),
+  values_displayed = c("HR", "CI"),
+  HR_x_limits = HR_x_limits,
+  HR_x_breaks = HR_x_breaks
+) +
+  labs(x = "Hazard Ratio") +
+  theme_classic(base_size = 13) +
+  theme(
+    axis.title.y = element_blank(),
+    axis.text.y  = element_text(size = 12)
+  )
+
+# Patchwork them together
+final_plot <- p_km + p_forest2 +
+  plot_layout(widths = c(3, 1)) +
+  plot_annotation(
+    title = "OS curves with corresponding HRs (including reference)"
+  )
+
+print(final_plot)
+
+```
+
+#### OS - paired analysis stratified by response before PSM
+```{r Pairwise OS analysis,warning=F, message=F,eval=TRUE, fig.width=25, fig.height=10}
+comps <- list(
+  c("Melanoma",   "RCC"),
+  c("Melanoma",   "NSCLC"),
+  c("RCC","NSCLC")
+)
+
+res_OS_CR <- run_survival_comparisons(
+  subset(dataDF,DOR=="CR"),
+  comparisons       = comps,
+  covariate_to_split= "Tumor",
+  descr_formula     = NULL,
+  endpoint          = "OS",
+  truncate_month    = 60
+)
+
+OS_CR <- res_OS_CR[[3]]
+OS_CR +
+  plot_annotation(
+    title    = "Overall Survival in Complete Responders",
+    subtitle = "Before PSM",
+    theme    = theme(
+      plot.title    = element_text(size = 40, face = "bold", hjust = 0.5),
+      plot.subtitle = element_text(size = 30,, face = "italic", hjust = 0.5)
+    )
+  )
+
+res_OS_PR <- run_survival_comparisons(
+  dataDF = subset(dataDF,DOR=="PR"),
+  comparisons       = comps,
+  covariate_to_split= "Tumor",
+  descr_formula     = NULL,
+  endpoint          = "OS",
+  truncate_month    = 60
+)
+
+OS_PR <- res_OS_PR[[3]]
+OS_PR +
+  plot_annotation(
+    title    = "Overall Survival in Partial Responders",
+    subtitle = "Before PSM",
+    theme    = theme(
+      plot.title    = element_text(size = 40, face = "bold", hjust = 0.5),
+      plot.subtitle = element_text(size = 30,, face = "italic", hjust = 0.5)
+    )
+  )
+```
+
+
+## Progression free survival
+### Combined survival analysis PFS
+```{r Survival analysis - PFS, warning=FALSE, message=FALSE, fig.width=15, fig.height=8, eval=FALSE}
+# Administrative censoring at 60 months
+dataDF$censor_time_PFS   <- pmin(dataDF$PFS_months, 60)
+dataDF$censor_status_PFS <- ifelse(dataDF$PFS_months > 60, 0, dataDF$Progressed)
+
+dataDF$Tumor <- relevel(dataDF$Tumor, ref = "Melanoma")
+dataDF$DOR <- relevel(dataDF$DOR, ref = "CR")
+# Kaplan–Meier on the censored data
+fit_PFS <- survfit(
+  Surv(censor_time_PFS, censor_status_PFS) ~ Tumor + DOR,
+  data = dataDF
+)
+# clean up strata names
+names(fit_PFS$strata) <- sub("Tumor=",             "", names(fit_PFS$strata))
+names(fit_PFS$strata) <- sub("DOR=", "", names(fit_PFS$strata))
+
+# Plot
+# Cox model for HR & CI
+dataDF$Tumor <- relevel(dataDF$Tumor, ref = "Melanoma")
+dataDF$DOR <- relevel(dataDF$DOR, ref = "CR")
+fit_cox <- coxph(Surv(dataDF$censor_time_PFS, dataDF$censor_status_PFS) ~ Tumor+DOR, data=dataDF)
+s_cox   <- summary(fit_cox)
+hr      <- s_cox$coefficients[, "exp(coef)"]
+ci_lo   <- s_cox$conf.int[, "lower .95"]
+ci_hi   <- s_cox$conf.int[, "upper .95"]
+hr_label <- sprintf("HR=%.2f (95%% CI %.2f–%.2f)",
+                        hr, ci_lo, ci_hi)
+
+# Pull out the table of HRs+CIs
+tidy_cox <- broom::tidy(
+  fit_cox,
+  exponentiate = TRUE,  # get HRs
+  conf.int     = TRUE   # get 95% CIs
+)
+
+# Prepare input for forest_plot.df()
+tbl <- tidy_cox %>%
+  mutate(
+    # identify which factor each term belongs to:
+    factor.name  = case_when(
+      startsWith(term, "Tumor")              ~ "Tumor",
+      startsWith(term, "DOR") ~ "DOR",
+      TRUE                                   ~ NA_character_
+    ),
+    # pull out the level name by dropping the var name prefix
+    factor.value = mapply(function(t, f) substring(t, nchar(f) + 1),
+                          term, factor.name,
+                          USE.NAMES = FALSE),
+    # define the rest of the required columns:
+    survivalResult = "PFS",
+    endpoint       = "PFS_months",
+    factor.id      = paste0(factor.name, ":", factor.value),
+    HR             = estimate,
+    Lower_CI       = conf.low,
+    Upper_CI       = conf.high,
+    p              = p.value,
+    # fill n & subgroup_n in the next step
+    n              = NA_integer_,
+    subgroup_n     = NA_integer_
+  ) %>%
+  select(survivalResult, endpoint,
+         factor.name, factor.value, factor.id,
+         HR, Lower_CI, Upper_CI, p,
+         n, subgroup_n)
+
+# Build the reference‐level rows dynamically
+refs <- tbl %>%
+  distinct(factor.name) %>%
+  rowwise() %>%
+  dplyr::mutate(
+    # all levels of this factor:
+    all_lvls = list(levels(dataDF[[factor.name]])),
+    # those present in the Cox output:
+    used_lvls = list(tbl$factor.value[tbl$factor.name == factor.name]),
+    # the one leftover is the reference:
+    factor.value = setdiff(all_lvls[[1]], used_lvls[[1]]),
+    survivalResult = tbl$survivalResult[1],
+    endpoint       = tbl$endpoint[1],
+    factor.id      = paste0(factor.name, ":", factor.value),
+    HR             = 1,
+    Lower_CI       = 1,
+    Upper_CI       = 1,
+    p              = NA_real_,
+    n              = sum(dataDF[[factor.name]] == factor.value),
+    subgroup_n     = n
+  ) %>%
+  ungroup() %>%
+  select(names(tbl))
+
+# Combine REF + non‐REF, ordering by factor.name
+full_tbl <- bind_rows(refs, tbl) %>%
+  arrange(factor.name,
+          factor.value)
+
+
+PFS_all <- ggsurvfit(fit_PFS, size = 1.5)
+p_km <- PFS_all +
+  add_censor_mark() +
+  add_risktable(
+    size = 5,
+    theme = theme_risktable_default(
+      axis.text.y.size = 15,
+      plot.title.size  = 15
+    ),
+    risktable_stats = "{n.risk} ({cum.event})"
+  ) +
+  labs(
+    x     = "Months",
+    y     = "Survival probability (%)",
+    title = "Progression free survival before propensity matching"
+  ) +
+  xlim(0, 60) +
+  scale_x_continuous(breaks = seq(0, 60, by = 12)) +
+  scale_y_continuous(breaks = c(0, .25, .5, .75, 1.0), limits = c(0, 1)) +
+  coord_cartesian(xlim = c(0, 70), expand = FALSE) +
+  theme_classic() +
+  theme(
+    plot.title        = element_text(hjust = 0.5, size = 18),
+    axis.title.x      = element_text(size = 20),
+    axis.title.y      = element_text(size = 20),
+    axis.text.x       = element_text(size = 15),
+    axis.text.y       = element_text(size = 15),
+    legend.position   = "bottom",
+    legend.direction  = "horizontal",
+    legend.text       = element_text(size = 18),
+    legend.key.size   = unit(10, "bigpts"),
+    legend.title      = element_blank()
+  )
+
+HR_x_limits <- c(min(full_tbl$HR), max(full_tbl$HR)) * c(1/1.5, 1.5)
+HR_x_breaks <- round(10^pretty(log10(HR_x_limits), n = 7),digits = 1)
+
+full_tbl$factor.id <- sub("Tumor:", "", full_tbl$factor.id)
+full_tbl$factor.id <- sub("DOR:", "", full_tbl$factor.id)
+## Forest plot panel with REF included
+p_forest2 <- survivalAnalysis:::forest_plot.df(
+  full_tbl,
+  labels_displayed = c("factor"),
+  values_displayed = c("HR", "CI", "p"),
+  HR_x_limits = HR_x_limits,
+  HR_x_breaks = HR_x_breaks
+) +
+  labs(x = "Hazard Ratio") +
+  theme_classic(base_size = 13) +
+  theme(
+    axis.title.y = element_blank(),
+    axis.text.y  = element_text(size = 12)
+  )
+
+# Patchwork them together
+final_plot <- p_km + p_forest2 +
+  plot_layout(widths = c(3, 1)) +
+  plot_annotation(
+    title = "PFS curves with corresponding HRs (including reference)"
+  )
+
+print(final_plot)
+
+#perform pairwise comparisons among the PFS curves
+pairs <- combn(unique(dataDF$Tumor), 2, simplify = FALSE)
+PR_results <- lapply(pairs, function(pair) {
+  # subset to PR & these two tumours
+  subdf <- dataDF %>%
+    filter(DOR == "PR", Tumor %in% pair) %>%
+    mutate(Tumor = factor(Tumor, levels = pair))
+  
+  # fit Cox on PFS
+  fit <- coxph(Surv(censor_time_PFS, censor_status_PFS) ~ Tumor, data = subdf)
+  s   <- summary(fit)
+  
+  # pull out the one coefficient
+  hr      <- s$coefficients[1, "exp(coef)"]
+  ci_lo   <- s$conf.int[1, "lower .95"]
+  ci_hi   <- s$conf.int[1, "upper .95"]
+  pval    <- s$coefficients[1, "Pr(>|z|)"]
+  
+  data.frame(
+    comparison = paste(pair, collapse = " vs "),
+    HR         = hr,
+    Lower_95   = ci_lo,
+    Upper_95   = ci_hi,
+    p.value    = pval,
+    stringsAsFactors = FALSE
+  )
+})
+
+# Combine and adjust
+PR_pvals <- bind_rows(PR_results) %>%
+  mutate(p.adj = p.adjust(p.value, method = "bonferroni"))
+PR_pvals
+##Now for CR patients
+pairs <- combn(unique(dataDF$Tumor), 2, simplify = FALSE)
+CR_results <- lapply(pairs, function(pair) {
+  # subset to PR & these two tumours
+  subdf <- dataDF %>%
+    filter(DOR == "CR", Tumor %in% pair) %>%
+    mutate(Tumor = factor(Tumor, levels = pair))
+  
+  # fit Cox on PFS
+  fit <- coxph(Surv(censor_time_PFS, censor_status_PFS) ~ Tumor, data = subdf)
+  s   <- summary(fit)
+  
+  # pull out the one coefficient
+  hr      <- s$coefficients[1, "exp(coef)"]
+  ci_lo   <- s$conf.int[1, "lower .95"]
+  ci_hi   <- s$conf.int[1, "upper .95"]
+  pval    <- s$coefficients[1, "Pr(>|z|)"]
+  
+  data.frame(
+    comparison = paste(pair, collapse = " vs "),
+    HR         = hr,
+    Lower_95   = ci_lo,
+    Upper_95   = ci_hi,
+    p.value    = pval,
+    stringsAsFactors = FALSE
+  )
+})
+
+# Combine and adjust
+CR_pvals <- bind_rows(CR_results) %>%
+  mutate(p.adj = p.adjust(p.value, method = "bonferroni"))
+CR_pvals
+
+### Median time to progression in PR vs CR
+fit_PFS <- survfit(
+  Surv(censor_time_PFS, censor_status_PFS) ~ DOR,
+  data = dataDF
+)
+
+print(final_plot)
+```
+
+### PFS - paired analysis stratified by response before PSM
+```{r Pairwise PFS,warning=F, message=F,eval=TRUE,  fig.width=25, fig.height=10}
+comps <- list(
+  c("Melanoma",   "RCC"),
+  c("Melanoma",   "NSCLC"),
+  c("RCC","NSCLC")
+)
+
+res_PFS_CR <- run_survival_comparisons(
+  subset(dataDF,DOR=="CR"),
+  comparisons       = comps,
+  covariate_to_split= "Tumor",
+  descr_formula     = NULL,
+  endpoint          = "PFS",
+  truncate_month    = 60
+)
+
+
+res_PFS_CR[[3]] +
+  plot_annotation(
+    title    = "Progression-Free Survival in Complete Responders",
+    subtitle = "Before PSM",
+    theme    = theme(
+      plot.title    = element_text(size = 40, face = "bold", hjust = 0.5),
+      plot.subtitle = element_text(size = 30,, face = "italic", hjust = 0.5)
+    )
+  )
+
+
+res_PFS_PR <- run_survival_comparisons(dataDF = subset(dataDF,DOR=="PR"),
+  comparisons       = comps,
+  covariate_to_split= "Tumor",
+  descr_formula     = NULL,
+  endpoint          = "PFS",
+  truncate_month    = 60
+)
+
+PFS_PR <- res_PFS_PR[[3]]
+PFS_PR +
+  plot_annotation(
+    title    = "Progression-Free Survival in Partial Responders",
+    subtitle = "Before PSM",
+    theme    = theme(
+      plot.title    = element_text(size = 40, face = "bold", hjust = 0.5),
+      plot.subtitle = element_text(size = 30,, face = "italic", hjust = 0.5)
+    )
+  )
+
+```
+
+
+
+
+# Propensity Score Matching for Treatment Groups Based on Clinical Features - matching cohorts in pairs of 2
+
+## Matching with standardized caliper - using custom function
+```{r propensity matching all,warning=F, message=F,eval=TRUE,  fig.width=25, fig.height=10}
+matching_features <- paste0("`", setdiff(features, c("CPI Regimen", "Brain metastases", "Tumor")), "`", collapse = " + ")
+matching_formula <- as.formula(paste0("Tumor ~", matching_features))
+
+descr_features <- paste0("`", setdiff(features, c("CPI Regimen", "DOR", "Brain metastases")), "`", collapse = " + ")
+descr_formula <- as.formula(paste0("DOR ~", descr_features))
+comparisons <- list(c("Melanoma", "RCC"), c("Melanoma", "NSCLC"), c("RCC", "NSCLC"))
+
+OS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "OS", truncate_month = 60, caliper=0.2)
+PFS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "PFS", truncate_month = 60, caliper = 0.2)
+
+print(paste0("PS matching with the following formula:", paste0("Tumor ~", matching_features)))
+
+OS_psm_all$combined_surv_plot
+OS_psm_all$love_plots
+PFS_psm_all$combined_surv_plot
+
+```
+
+
+## PSM only on CR
+```{r propensity matching CR,warning=F, message=F,eval=FALSE,  fig.width=15, fig.height=8}
+matching_features_no_DOR <- paste0("`", setdiff(features, c("CPI Regimen", "Brain metastases", "DOR", "Tumor")), "`", collapse = " + ")
+matching_formula_no_DOR <- as.formula(paste0("Tumor ~", matching_features_no_DOR))
+
+comparisons <- list(c("Melanoma", "RCC"), c("Melanoma", "NSCLC"), c("RCC", "NSCLC"))
+
+OS_psm_CR <- run_psm_and_survival(dataDF = subset(dataDF, DOR == "CR"), matching_formula = matching_formula_no_DOR, comparisons = comparisons,covariate_to_split = "Tumor", endpoint = "OS", truncate_month = 60)
+PFS_psm_CR <- run_psm_and_survival(dataDF = subset(dataDF, DOR == "CR"),matching_formula= matching_formula_no_DOR, comparisons = comparisons,covariate_to_split = "Tumor", endpoint = "PFS", truncate_month = 60)
+
+print(paste0("PS matching with the following formula:", paste0("Tumor ~", matching_features)))
+OS_psm_CR$combined_surv_plot
+PFS_psm_CR$combined_surv_plot
+
+OS_psm_CR$love_plots
+PFS_psm_CR$love_plots
+```
+
+## PSM only on PR
+```{r propensity matching PR,warning=F, message=F,eval=FALSE,  fig.width=15, fig.height=8}
+matching_features <- paste0("`", setdiff(features, c("CPI Regimen", "Brain metastases", "DOR", "Tumor")), "`", collapse = " + ")
+matching_formula <- as.formula(paste0("Tumor ~", matching_features))
+
+comparisons <- list(c("Melanoma", "RCC"), c("Melanoma", "NSCLC"), c("RCC", "NSCLC"))
+matching_formula
+OS_psm_PR <- run_psm_and_survival(dataDF = subset(dataDF, DOR == "PR"), comparisons = comparisons, matching_formula = matching_formula_no_DOR, covariate_to_split = "Tumor", endpoint = "OS", truncate_month = 60)
+PFS_psm_PR <- run_psm_and_survival(dataDF = subset(dataDF, DOR == "PR"), comparisons = comparisons, matching_formula = matching_formula_no_DOR,covariate_to_split = "Tumor", endpoint = "PFS", truncate_month = 60)
+
+print(paste0("PS matching with the following formula:", paste0("Tumor ~", matching_features)))
+
+OS_psm_PR$combined_surv_plot
+PFS_psm_PR$combined_surv_plot
+```
+
+# Sensitivity analysis - PSM on all using different calipers
+```{r propensity matching different calipers,warning=F, message=F,eval=TRUE,  fig.width=15, fig.height=8}
+matching_features <- paste0("`", setdiff(features, c("CPI Regimen", "Brain metastases", "Tumor")), "`", collapse = " + ")
+matching_formula <- as.formula(paste0("Tumor ~", matching_features))
+
+descr_features <- paste0("`", setdiff(features, c("CPI Regimen", "DOR", "Brain metastases")), "`", collapse = " + ")
+descr_formula <- as.formula(paste0("DOR ~", descr_features))
+comparisons <- list(c("Melanoma", "RCC"), c("Melanoma", "NSCLC"), c("RCC", "NSCLC"))
+
+calipers <- c(0.05,0.1,0.2,0.4,0.8)
+for (caliper in calipers){
+  PFS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons,
+                                      matching_formula, covariate_to_split = "Tumor",
+                                      descr_formula = NULL, endpoint = "PFS",
+                                      truncate_month = 60, 
+                                      caliper = caliper)
+
+  plot_title <- paste0("PS matching with the full formula and caliper:", paste0(caliper))
+  print(PFS_psm_all$combined_surv_plot+
+          plot_annotation(title=plot_title,
+                          theme=theme(plot.title=element_text(size = 20, face = "bold", hjust = 0.5),
+                                      plot.subtitle = element_text(size = 15, hjust = 0.5)
+    )
+  )
+  )
+}
+
+
+PFS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons,
+                                      matching_formula, covariate_to_split = "Tumor",
+                                      descr_formula = NULL, endpoint = "PFS",
+                                      truncate_month = 60, 
+                                      caliper = 0.2, 
+                                    mahvars = "Age")
+PFS_psm_all$combined_surv_plot+plot_annotation(title="PSM using mahvars for Age",
+                          theme=theme(plot.title=element_text(size = 20, face = "bold", hjust = 0.5),
+                                      plot.subtitle = element_text(size = 15, hjust = 0.5)))
+PFS_psm_all$love_plots
+```
+
+# Median / Max follow up
+```{r follow up calculation, warning=F, message=F,eval=TRUE,  fig.width=15, fig.height=8}
+for(i in unique(dataDF$Tumor)) {
+  rev_surv_obj <- with(
+    subset(dataDF, Tumor == i),
+    Surv(censor_time_OS, censor_status_OS == 0)
+  )
+
+  # Fit the reversed Kaplan-Meier curve
+  rev_fit <- survfit(rev_surv_obj ~ 1)
+
+  # Grab the summary table
+  tab <- summary(rev_fit)$table
+  # It has named elements "median", "0.95LCL", "0.95UCL"
+  med   <- tab["median"]
+  lower <- tab["0.95LCL"]
+  upper <- tab["0.95UCL"]
+
+  # Convert from months to years (divide by 12)
+  med_yr   <- med   / 12
+  lower_yr <- lower / 12
+  upper_yr <- upper / 12
+
+  cat(sprintf(
+    "Tumour: %s\n  Median follow-up = %.2f years (95%% CI %.2f–%.2f)\n",
+    i, med_yr, lower_yr, upper_yr
+  ))
+
+  # And the maximum follow-up (no CI available for max)
+  max_fu <- max(rev_fit$time, na.rm = TRUE) / 12
+  cat(sprintf("  Maximum follow-up = %.2f years\n\n", max_fu))
+}
+
+# Fit the reverse‐KM: event = still under follow‐up (i.e. censor_status_OS == 0)
+rev_fit_all <- survfit(
+  Surv(censor_time_OS, censor_status_OS == 0) ~ Tumor,
+  data = dataDF
+)
+
+# Plot as percentage survival (i.e. % still being followed)
+p_rev <- ggsurvplot(
+  rev_fit_all,
+  fun             = "pct",        # multiply S(t) by 100
+  conf.int        = TRUE,         # 95% CI bands
+  risk.table      = TRUE,         # show # at risk = # still under follow-up
+  risk.table.title= "Still under follow-up",
+  xlab            = "Months since start",
+  ylab            = "Follow-up probability (%)",
+  title           = "Reverse Kaplan–Meier: Percent under follow-up",
+  legend.title    = "Tumour",
+  palette         = scales::hue_pal()(length(levels(dataDF$Tumor))),
+  ggtheme         = theme_classic(base_size = 14)
+)
+
+# Tweak the y-axis so it shows percentages
+p_rev$plot <- p_rev$plot +
+  scale_y_continuous(
+    limits = c(0,100),
+    breaks = seq(0,100, by = 20),
+    labels = function(x) paste0(x, "%")
+  )
+
+p_rev<- p_rev$plot+geom_hline(yintercept = 50, linetype = "dashed")
+
+print(p_rev)
+```
+
+# Percentages of administrative censored patients
+## Administrative censoring rates per tumour
+```{r admin_censoring, warning=FALSE, message=FALSE}
+library(dplyr)
+
+admin_censoring_OS <- dataDF %>%
+  dplyr::summarise(
+    total          = n(),
+    admin_censored = sum(OS_months > 60),
+    pct_censored   = admin_censored / total * 100
+  )
+
+admin_censoring_OS %>%
+  mutate(
+    summary = sprintf(
+      "%d/%d (%.1f%%) administratively censored at 60 months (OS)",
+      admin_censored, total, pct_censored
+    )
+  ) %>%
+  pull(summary) %>%
+  cat(sep = "\n")
+
+#PFS
+admin_censoring_PFS <- dataDF %>%
+  dplyr::summarise(
+    total          = n(),
+    admin_censored = sum(PFS_months > 60),
+    pct_censored   = admin_censored / total * 100
+  )
+
+admin_censoring_PFS %>%
+  mutate(
+    summary = sprintf(
+      "%d/%d (%.1f%%) administratively censored at 60 months (PFS)",
+      admin_censored, total, pct_censored
+    )
+  ) %>%
+  pull(summary) %>%
+  cat(sep = "\n")
+```
+
+# Differential distribution of CRs
+```{r chi_sq_response_by_tumour, warning=FALSE, message=FALSE}
+# Contingency table: Tumour × Response (CR vs PR)
+resp_tab <- table(dataDF$Tumor, dataDF$DOR)
+print(resp_tab)
+
+# χ² test of independence
+chi2_res <- chisq.test(resp_tab)
+print(chi2_res)
+
+# Extract and display CR proportions by tumour
+cr_props <- prop.table(resp_tab, 1)[, "CR"] * 100
+cat("CR proportion by tumour (%):\n")
+print(round(cr_props, 1))
+
+# Build a matrix of counts: rows = Tumour, cols = Response
+resp_tab <- table(dataDF$Tumor, dataDF$DOR)
+
+###checking here with fisher's exact test as well
+# Pairwise tests of proportions, Bonferroni correction
+library(rstatix)
+
+tumours <- rownames(resp_tab)
+pairs   <- combn(tumours, 2, simplify = FALSE)
+
+fisher_results <- list()
+for (i in 1:length(pairs)){
+  pair <- pairs[[i]]
+  sub_tab <- resp_tab[pair, , drop = FALSE]
+  pval    <- fisher.test(sub_tab)$p.value
+  fisher_results[[i]] <- data.frame(
+    comparison = paste(unlist(pair), collapse = " vs "),
+    p.value    = pval,
+    stringsAsFactors = FALSE
+    )
+}
+
+
+fisher_df <- do.call(rbind, fisher_results) %>%
+  mutate(p.adj = p.adjust(p.value, method = "bonferroni"))
+
+cat("\nPairwise Fisher’s Exact (with Bonferroni adj):\n")
+print(fisher_df)
+
+
+```
+#Median time to event
+```{r median_time_to_progression_by_histology, warning=FALSE, message=FALSE}
+responses <- c("PR","CR")
+tumors   <- c("Melanoma","RCC","NSCLC")
+abbr     <- c("Melanoma"="MM", "NSCLC"="NSCLC", "RCC"="RCC")
+
+dataDF$censor_time_PFS   <- pmin(dataDF$PFS_months, 60)
+dataDF$censor_status_PFS <- ifelse(dataDF$PFS_months > 60, 0, dataDF$Progressed)
+
+# Loop over responses (PR and CR)
+for (d in responses) {
+  medians <- c()
+  for (t in tumors) {
+    df_sub <- dplyr::filter(dataDF, DOR == d, Tumor == t, censor_status_PFS == 1)
+    if (nrow(df_sub) > 0) {
+      fit <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1, data = df_sub)
+      median_time <- summary(fit)$table["median"]
+      medians <- c(medians, median_time)  # Store median time for each tumor type
+    } else {
+      # If no progression, add NA
+      medians <- c(medians, NA)
+    }
+  }
+  # Format each median with the tumor abbreviation
+  parts <- sprintf("%.2f months (%s)", medians, abbr[tumors])
+  
+  # Combine the parts into a single string with commas and "and"
+  txt <- paste0(
+    paste(parts[1:2], collapse = ", "),
+    " and ",
+    parts[3]
+  )
+  
+  # Print the final result
+  cat(sprintf(
+    "Median time-to-progression among %s was %s.\n",
+    d, txt
+  ))
+}
+```
