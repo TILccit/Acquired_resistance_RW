@@ -50,7 +50,7 @@ Please note that reproducing the analysis may require sufficient computational r
 It is recommended to review the documentation and understand the workflow before running the scripts.
 
 - - - -
-For any further inquiries or clarifications, please contact **Marco Donia, M.D., Ph.D** at _marco.donia@regionh.dk_.
+For any further inquiries or clarifications, please contact **Marco Donia, M.D., Ph.D** at _marco.donia@regionh.dk_ or **Mario Presti, M.D.** at _mario.presti.01@regionh.dk_.
 - - - -
 
 ## **Citation**  ##
