@@ -1,7 +1,7 @@
 Survival analysis renal
 ================
 Mario Presti
-First created on Feb 2025. Updated on 06 August 2025
+First created on Feb 2025. Updated on 27 August 2025
 
 - [Introduction](#introduction)
 - [Loading Libraries](#loading-libraries)
@@ -47,7 +47,7 @@ messed up with excel files.
 
 ``` r
 setwd("E:/PhD_projects/Realworld/Data/")
-dataDF <- read.xlsx("renal.xlsx")
+dataDF <- read.xlsx("renal_md_agecorrect_final.xlsx")
 
 # Check for duplicates
 any(duplicated(dataDF$patient_id))
@@ -158,15 +158,13 @@ summary(dataDF)
     ##                     Mean   :1372   Mean   :0.3333   Mean   : 953.8  
     ##                     3rd Qu.:1770   3rd Qu.:1.0000   3rd Qu.:1412.0  
     ##                     Max.   :3313   Max.   :1.0000   Max.   :2756.0  
-    ##                                                                     
     ##    Progressed       sex      age_1st_treat   line_correct   regime_correct
-    ##  Min.   :0.0000   1   :200   Min.   :27.00   First:189    ipi/nivo :200   
-    ##  1st Qu.:0.0000   2   : 59   1st Qu.:55.00   Other: 72    nivolumab: 61   
-    ##  Median :1.0000   NA's:  2   Median :63.00                                
-    ##  Mean   :0.6054              Mean   :62.19                                
-    ##  3rd Qu.:1.0000              3rd Qu.:69.50                                
-    ##  Max.   :1.0000              Max.   :85.00                                
-    ##                              NA's   :2                                    
+    ##  Min.   :0.0000   1   :200   Min.   :27.42   First:189    ipi/nivo :200   
+    ##  1st Qu.:0.0000   2   : 59   1st Qu.:58.41   Other: 72    nivolumab: 61   
+    ##  Median :1.0000   NA's:  2   Median :65.43                                
+    ##  Mean   :0.6054              Mean   :64.78                                
+    ##  3rd Qu.:1.0000              3rd Qu.:72.32                                
+    ##  Max.   :1.0000              Max.   :85.89                                
     ##  Brain_metastases      PS      bor      clear_cell sarcomatoid smoking   
     ##  Length:261         0   :128   CR: 79   ja :225    ja : 79     0   : 74  
     ##  Class :character   1   :111   PR:182   nej: 36    nej:182     1   : 39  
@@ -174,11 +172,9 @@ summary(dataDF)
     ##                     3   :  1                                   99  :  5  
     ##                     NA's:  3                                   NA's: 18  
     ##                                                                          
-    ##                                                                          
     ##                 IMDC    
     ##  Good/Intermediate:187  
     ##  Poor             : 74  
-    ##                         
     ##                         
     ##                         
     ##                         
@@ -288,9 +284,7 @@ dataDF$sex <- NULL
 names(dataDF)[names(dataDF) == 'age_1st_treat'] <- 'Age'
 names(dataDF)[names(dataDF) == 'regime_correct'] <- 'CPI Regimen'
 names(dataDF)[names(dataDF) == 'PS'] <- 'ECOG Performance Status'
-# names(dataDF)[names(dataDF) == 'stage_2'] <- 'AJCC 8th stage'
 names(dataDF)[names(dataDF) == 'Brain_metastases'] <- 'Brain metastases'
-# names(dataDF)[names(dataDF) == 'braf_correct'] <- 'BRAF mutation'
 names(dataDF)[names(dataDF) == 'bor'] <- 'Objective response'
 names(dataDF)[names(dataDF) == 'line_correct'] <- 'Treatment line'
 names(dataDF)[names(dataDF) == 'clear_cell'] <- 'RCC subtype'
@@ -487,43 +481,43 @@ summary(cox_model_all)
     ##   n= 237, number of events= 70 
     ## 
     ##                                          coef exp(coef) se(coef)      z
-    ## SexFemale                             0.53739   1.71153  0.27460  1.957
-    ## Age                                   0.01960   1.01980  0.01376  1.425
-    ## `CPI Regimen`Anti-PD1                 0.69547   2.00465  0.43681  1.592
-    ## `Treatment line`Other                -0.25881   0.77197  0.44297 -0.584
-    ## `RCC subtype`Non clear cell           0.73011   2.07531  0.33712  2.166
-    ## `Sarcomatoid subtype`Non sarcomatoid  0.10535   1.11110  0.30251  0.348
-    ## IMDCPoor                              0.78535   2.19316  0.25169  3.120
-    ## `ECOG Performance Status`PS≥1         0.17059   1.18600  0.26304  0.649
-    ## `Objective response`PR                2.61710  13.69600  0.59802  4.376
+    ## SexFemale                             0.55133   1.73556  0.27453  2.008
+    ## Age                                   0.02313   1.02340  0.01416  1.634
+    ## `CPI Regimen`Anti-PD1                 0.69239   1.99849  0.43055  1.608
+    ## `Treatment line`Other                -0.31918   0.72674  0.43280 -0.737
+    ## `RCC subtype`Non clear cell           0.72712   2.06912  0.33625  2.162
+    ## `Sarcomatoid subtype`Non sarcomatoid  0.08025   1.08355  0.30378  0.264
+    ## IMDCPoor                              0.81421   2.25740  0.25115  3.242
+    ## `ECOG Performance Status`PS≥1         0.15767   1.17078  0.26291  0.600
+    ## `Objective response`PR                2.61213  13.62807  0.59742  4.372
     ##                                      Pr(>|z|)    
-    ## SexFemale                             0.05035 .  
-    ## Age                                   0.15415    
-    ## `CPI Regimen`Anti-PD1                 0.11135    
-    ## `Treatment line`Other                 0.55904    
-    ## `RCC subtype`Non clear cell           0.03033 *  
-    ## `Sarcomatoid subtype`Non sarcomatoid  0.72766    
-    ## IMDCPoor                              0.00181 ** 
-    ## `ECOG Performance Status`PS≥1         0.51664    
-    ## `Objective response`PR               1.21e-05 ***
+    ## SexFemale                             0.04461 *  
+    ## Age                                   0.10223    
+    ## `CPI Regimen`Anti-PD1                 0.10780    
+    ## `Treatment line`Other                 0.46083    
+    ## `RCC subtype`Non clear cell           0.03058 *  
+    ## `Sarcomatoid subtype`Non sarcomatoid  0.79166    
+    ## IMDCPoor                              0.00119 ** 
+    ## `ECOG Performance Status`PS≥1         0.54870    
+    ## `Objective response`PR               1.23e-05 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ##                                      exp(coef) exp(-coef) lower .95 upper .95
-    ## SexFemale                                1.712    0.58427    0.9992     2.932
-    ## Age                                      1.020    0.98059    0.9927     1.048
-    ## `CPI Regimen`Anti-PD1                    2.005    0.49884    0.8516     4.719
-    ## `Treatment line`Other                    0.772    1.29539    0.3240     1.839
-    ## `RCC subtype`Non clear cell              2.075    0.48185    1.0718     4.018
-    ## `Sarcomatoid subtype`Non sarcomatoid     1.111    0.90001    0.6141     2.010
-    ## IMDCPoor                                 2.193    0.45596    1.3392     3.592
-    ## `ECOG Performance Status`PS≥1            1.186    0.84317    0.7083     1.986
-    ## `Objective response`PR                  13.696    0.07301    4.2419    44.221
+    ## SexFemale                               1.7356    0.57618    1.0134     2.972
+    ## Age                                     1.0234    0.97713    0.9954     1.052
+    ## `CPI Regimen`Anti-PD1                   1.9985    0.50038    0.8595     4.647
+    ## `Treatment line`Other                   0.7267    1.37600    0.3112     1.697
+    ## `RCC subtype`Non clear cell             2.0691    0.48330    1.0705     3.999
+    ## `Sarcomatoid subtype`Non sarcomatoid    1.0836    0.92289    0.5974     1.965
+    ## IMDCPoor                                2.2574    0.44299    1.3798     3.693
+    ## `ECOG Performance Status`PS≥1           1.1708    0.85413    0.6993     1.960
+    ## `Objective response`PR                 13.6281    0.07338    4.2258    43.950
     ## 
-    ## Concordance= 0.781  (se = 0.027 )
-    ## Likelihood ratio test= 72.87  on 9 df,   p=4e-12
-    ## Wald test            = 49.86  on 9 df,   p=1e-07
-    ## Score (logrank) test = 65.85  on 9 df,   p=1e-10
+    ## Concordance= 0.779  (se = 0.026 )
+    ## Likelihood ratio test= 73.56  on 9 df,   p=3e-12
+    ## Wald test            = 50.35  on 9 df,   p=9e-08
+    ## Score (logrank) test = 66.55  on 9 df,   p=7e-11
 
 ``` r
 summary(cox_model_sign)
@@ -535,43 +529,43 @@ summary(cox_model_sign)
     ##   n= 237, number of events= 70 
     ## 
     ##                                          coef exp(coef) se(coef)      z
-    ## SexFemale                             0.53739   1.71153  0.27460  1.957
-    ## Age                                   0.01960   1.01980  0.01376  1.425
-    ## `CPI Regimen`Anti-PD1                 0.69547   2.00465  0.43681  1.592
-    ## `Treatment line`Other                -0.25881   0.77197  0.44297 -0.584
-    ## `RCC subtype`Non clear cell           0.73011   2.07531  0.33712  2.166
-    ## `Sarcomatoid subtype`Non sarcomatoid  0.10535   1.11110  0.30251  0.348
-    ## IMDCPoor                              0.78535   2.19316  0.25169  3.120
-    ## `ECOG Performance Status`PS≥1         0.17059   1.18600  0.26304  0.649
-    ## `Objective response`PR                2.61710  13.69600  0.59802  4.376
+    ## SexFemale                             0.55133   1.73556  0.27453  2.008
+    ## Age                                   0.02313   1.02340  0.01416  1.634
+    ## `CPI Regimen`Anti-PD1                 0.69239   1.99849  0.43055  1.608
+    ## `Treatment line`Other                -0.31918   0.72674  0.43280 -0.737
+    ## `RCC subtype`Non clear cell           0.72712   2.06912  0.33625  2.162
+    ## `Sarcomatoid subtype`Non sarcomatoid  0.08025   1.08355  0.30378  0.264
+    ## IMDCPoor                              0.81421   2.25740  0.25115  3.242
+    ## `ECOG Performance Status`PS≥1         0.15767   1.17078  0.26291  0.600
+    ## `Objective response`PR                2.61213  13.62807  0.59742  4.372
     ##                                      Pr(>|z|)    
-    ## SexFemale                             0.05035 .  
-    ## Age                                   0.15415    
-    ## `CPI Regimen`Anti-PD1                 0.11135    
-    ## `Treatment line`Other                 0.55904    
-    ## `RCC subtype`Non clear cell           0.03033 *  
-    ## `Sarcomatoid subtype`Non sarcomatoid  0.72766    
-    ## IMDCPoor                              0.00181 ** 
-    ## `ECOG Performance Status`PS≥1         0.51664    
-    ## `Objective response`PR               1.21e-05 ***
+    ## SexFemale                             0.04461 *  
+    ## Age                                   0.10223    
+    ## `CPI Regimen`Anti-PD1                 0.10780    
+    ## `Treatment line`Other                 0.46083    
+    ## `RCC subtype`Non clear cell           0.03058 *  
+    ## `Sarcomatoid subtype`Non sarcomatoid  0.79166    
+    ## IMDCPoor                              0.00119 ** 
+    ## `ECOG Performance Status`PS≥1         0.54870    
+    ## `Objective response`PR               1.23e-05 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ##                                      exp(coef) exp(-coef) lower .95 upper .95
-    ## SexFemale                                1.712    0.58427    0.9992     2.932
-    ## Age                                      1.020    0.98059    0.9927     1.048
-    ## `CPI Regimen`Anti-PD1                    2.005    0.49884    0.8516     4.719
-    ## `Treatment line`Other                    0.772    1.29539    0.3240     1.839
-    ## `RCC subtype`Non clear cell              2.075    0.48185    1.0718     4.018
-    ## `Sarcomatoid subtype`Non sarcomatoid     1.111    0.90001    0.6141     2.010
-    ## IMDCPoor                                 2.193    0.45596    1.3392     3.592
-    ## `ECOG Performance Status`PS≥1            1.186    0.84317    0.7083     1.986
-    ## `Objective response`PR                  13.696    0.07301    4.2419    44.221
+    ## SexFemale                               1.7356    0.57618    1.0134     2.972
+    ## Age                                     1.0234    0.97713    0.9954     1.052
+    ## `CPI Regimen`Anti-PD1                   1.9985    0.50038    0.8595     4.647
+    ## `Treatment line`Other                   0.7267    1.37600    0.3112     1.697
+    ## `RCC subtype`Non clear cell             2.0691    0.48330    1.0705     3.999
+    ## `Sarcomatoid subtype`Non sarcomatoid    1.0836    0.92289    0.5974     1.965
+    ## IMDCPoor                                2.2574    0.44299    1.3798     3.693
+    ## `ECOG Performance Status`PS≥1           1.1708    0.85413    0.6993     1.960
+    ## `Objective response`PR                 13.6281    0.07338    4.2258    43.950
     ## 
-    ## Concordance= 0.781  (se = 0.027 )
-    ## Likelihood ratio test= 72.87  on 9 df,   p=4e-12
-    ## Wald test            = 49.86  on 9 df,   p=1e-07
-    ## Score (logrank) test = 65.85  on 9 df,   p=1e-10
+    ## Concordance= 0.779  (se = 0.026 )
+    ## Likelihood ratio test= 73.56  on 9 df,   p=3e-12
+    ## Wald test            = 50.35  on 9 df,   p=9e-08
+    ## Score (logrank) test = 66.55  on 9 df,   p=7e-11
 
 ``` r
 forest_model_all <- forest_model(cox_model_all,  # Set x-axis limits
@@ -803,17 +797,17 @@ Male
 
 <td style="text-align:center;">
 
-1.710
+1.740
 </td>
 
 <td style="text-align:center;">
 
-0.999-2.93
+1.01-2.97
 </td>
 
 <td style="text-align:center;">
 
-0.0504
+0.0446
 </td>
 
 </tr>
@@ -841,12 +835,12 @@ Fitted as continuous
 
 <td style="text-align:center;">
 
-1-1.05
+1.01-1.06
 </td>
 
 <td style="text-align:center;border-right:1px solid;">
 
-2.62e-02
+1.74e-02
 </td>
 
 <td style="text-align:center;">
@@ -856,12 +850,12 @@ Fitted as continuous
 
 <td style="text-align:center;">
 
-0.993-1.05
+0.995-1.05
 </td>
 
 <td style="text-align:center;">
 
-0.154
+0.102
 </td>
 
 </tr>
@@ -905,12 +899,12 @@ Anti-PD1+Anti-CTLA4
 
 <td style="text-align:center;">
 
-0.852-4.72
+0.859-4.65
 </td>
 
 <td style="text-align:center;">
 
-0.111
+0.108
 </td>
 
 </tr>
@@ -949,17 +943,17 @@ First
 
 <td style="text-align:center;">
 
-0.772
+0.727
 </td>
 
 <td style="text-align:center;">
 
-0.324-1.84
+0.311-1.7
 </td>
 
 <td style="text-align:center;">
 
-0.559
+0.461
 </td>
 
 </tr>
@@ -998,17 +992,17 @@ Clear cell
 
 <td style="text-align:center;">
 
-2.080
+2.070
 </td>
 
 <td style="text-align:center;">
 
-1.07-4.02
+1.07-4
 </td>
 
 <td style="text-align:center;">
 
-0.0303
+0.0306
 </td>
 
 </tr>
@@ -1047,17 +1041,17 @@ Sarcomatoid
 
 <td style="text-align:center;">
 
-1.110
+1.080
 </td>
 
 <td style="text-align:center;">
 
-0.614-2.01
+0.597-1.97
 </td>
 
 <td style="text-align:center;">
 
-0.728
+0.792
 </td>
 
 </tr>
@@ -1096,17 +1090,17 @@ Good/Intermediate
 
 <td style="text-align:center;">
 
-2.190
+2.260
 </td>
 
 <td style="text-align:center;">
 
-1.34-3.59
+1.38-3.69
 </td>
 
 <td style="text-align:center;">
 
-0.00181
+0.00119
 </td>
 
 </tr>
@@ -1145,17 +1139,17 @@ PS=0
 
 <td style="text-align:center;">
 
-1.190
+1.170
 </td>
 
 <td style="text-align:center;">
 
-0.708-1.99
+0.699-1.96
 </td>
 
 <td style="text-align:center;">
 
-0.517
+0.549
 </td>
 
 </tr>
@@ -1194,17 +1188,17 @@ CR
 
 <td style="text-align:center;">
 
-13.700
+13.600
 </td>
 
 <td style="text-align:center;">
 
-4.24-44.2
+4.23-43.9
 </td>
 
 <td style="text-align:center;">
 
-1.21e-05
+1.23e-05
 </td>
 
 </tr>
@@ -1350,43 +1344,43 @@ summary(cox_model_all)
     ##   n= 237, number of events= 141 
     ## 
     ##                                           coef exp(coef)  se(coef)      z
-    ## SexFemale                             0.098200  1.103183  0.205726  0.477
-    ## Age                                   0.001019  1.001020  0.009178  0.111
-    ## `CPI Regimen`Anti-PD1                -0.025460  0.974861  0.314368 -0.081
-    ## `Treatment line`Other                 0.232608  1.261886  0.303809  0.766
-    ## `RCC subtype`Non clear cell           0.399935  1.491728  0.243357  1.643
-    ## `Sarcomatoid subtype`Non sarcomatoid  0.120939  1.128556  0.204963  0.590
-    ## IMDCPoor                              0.152932  1.165246  0.187496  0.816
-    ## `ECOG Performance Status`PS≥1         0.019422  1.019612  0.179454  0.108
-    ## `Objective response`PR                1.551614  4.719080  0.249898  6.209
+    ## SexFemale                             0.096453  1.101258  0.205655  0.469
+    ## Age                                  -0.002076  0.997927  0.009355 -0.222
+    ## `CPI Regimen`Anti-PD1                -0.021710  0.978524  0.313334 -0.069
+    ## `Treatment line`Other                 0.224284  1.251426  0.298913  0.750
+    ## `RCC subtype`Non clear cell           0.395208  1.484693  0.243425  1.624
+    ## `Sarcomatoid subtype`Non sarcomatoid  0.127403  1.135875  0.205921  0.619
+    ## IMDCPoor                              0.152939  1.165254  0.187399  0.816
+    ## `ECOG Performance Status`PS≥1         0.027509  1.027891  0.180699  0.152
+    ## `Objective response`PR                1.561317  4.765092  0.249617  6.255
     ##                                      Pr(>|z|)    
-    ## SexFemale                               0.633    
-    ## Age                                     0.912    
-    ## `CPI Regimen`Anti-PD1                   0.935    
-    ## `Treatment line`Other                   0.444    
-    ## `RCC subtype`Non clear cell             0.100    
-    ## `Sarcomatoid subtype`Non sarcomatoid    0.555    
-    ## IMDCPoor                                0.415    
-    ## `ECOG Performance Status`PS≥1           0.914    
-    ## `Objective response`PR               5.33e-10 ***
+    ## SexFemale                               0.639    
+    ## Age                                     0.824    
+    ## `CPI Regimen`Anti-PD1                   0.945    
+    ## `Treatment line`Other                   0.453    
+    ## `RCC subtype`Non clear cell             0.104    
+    ## `Sarcomatoid subtype`Non sarcomatoid    0.536    
+    ## IMDCPoor                                0.414    
+    ## `ECOG Performance Status`PS≥1           0.879    
+    ## `Objective response`PR               3.98e-10 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ##                                      exp(coef) exp(-coef) lower .95 upper .95
-    ## SexFemale                               1.1032     0.9065    0.7371     1.651
-    ## Age                                     1.0010     0.9990    0.9832     1.019
-    ## `CPI Regimen`Anti-PD1                   0.9749     1.0258    0.5264     1.805
-    ## `Treatment line`Other                   1.2619     0.7925    0.6957     2.289
-    ## `RCC subtype`Non clear cell             1.4917     0.6704    0.9259     2.403
-    ## `Sarcomatoid subtype`Non sarcomatoid    1.1286     0.8861    0.7552     1.687
-    ## IMDCPoor                                1.1652     0.8582    0.8069     1.683
-    ## `ECOG Performance Status`PS≥1           1.0196     0.9808    0.7173     1.449
-    ## `Objective response`PR                  4.7191     0.2119    2.8916     7.701
+    ## SexFemale                               1.1013     0.9081    0.7359     1.648
+    ## Age                                     0.9979     1.0021    0.9798     1.016
+    ## `CPI Regimen`Anti-PD1                   0.9785     1.0219    0.5295     1.808
+    ## `Treatment line`Other                   1.2514     0.7991    0.6966     2.248
+    ## `RCC subtype`Non clear cell             1.4847     0.6735    0.9214     2.392
+    ## `Sarcomatoid subtype`Non sarcomatoid    1.1359     0.8804    0.7587     1.701
+    ## IMDCPoor                                1.1653     0.8582    0.8071     1.682
+    ## `ECOG Performance Status`PS≥1           1.0279     0.9729    0.7213     1.465
+    ## `Objective response`PR                  4.7651     0.2099    2.9214     7.772
     ## 
-    ## Concordance= 0.688  (se = 0.021 )
-    ## Likelihood ratio test= 64.97  on 9 df,   p=1e-10
-    ## Wald test            = 49.53  on 9 df,   p=1e-07
-    ## Score (logrank) test = 58.7  on 9 df,   p=2e-09
+    ## Concordance= 0.69  (se = 0.022 )
+    ## Likelihood ratio test= 65.01  on 9 df,   p=1e-10
+    ## Wald test            = 49.45  on 9 df,   p=1e-07
+    ## Score (logrank) test = 58.61  on 9 df,   p=2e-09
 
 ``` r
 summary(cox_model_sign)
@@ -1538,7 +1532,7 @@ knitr::kable(
 | Covariate | Level | Reference | Univariable HR | Univariable CI | Univariable P-value | Multivariable HR | Multivariable CI | Multivariable P-value |
 |:---|:---|:---|---:|:---|---:|:---|:---|:---|
 | Sex | Female | Male | 1.12 | 0.773-1.63 | 0.544 |  |  | Excluded from multivariable analysis |
-| Age | Fitted as continuous |  | 1.01 | 0.992-1.03 | 0.318 |  |  | Excluded from multivariable analysis |
+| Age | Fitted as continuous |  | 1.01 | 0.991-1.03 | 0.362 |  |  | Excluded from multivariable analysis |
 | CPI Regimen | Anti-PD1 | Anti-PD1+Anti-CTLA4 | 1.14 | 0.795-1.64 | 0.471 |  |  | Excluded from multivariable analysis |
 | Treatment line | Other | First | 1.33 | 0.947-1.87 | 0.100 | 1.24 | 0.831-1.84 | 0.297 |
 | RCC subtype | Non clear cell | Clear cell | 1.49 | 0.972-2.29 | 0.067 | 1.5 | 0.939-2.4 | 0.0897 |
@@ -1709,12 +1703,12 @@ Fitted as continuous
 
 <td style="text-align:center;">
 
-0.992-1.03
+0.991-1.03
 </td>
 
 <td style="text-align:center;border-right:1px solid;">
 
-0.318
+0.362
 </td>
 
 <td style="text-align:center;">

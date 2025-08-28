@@ -1,7 +1,7 @@
 Propensity Scores Calculation and Survival Analysis
 ================
 Mario Presti
-First created on May 2025 Updated on 06 August 2025
+First created on May 2025 Updated on 27 August 2025
 
 - [Introduction](#introduction)
 - [Loading Libraries](#loading-libraries)
@@ -213,20 +213,17 @@ summary(dataDF)
     ##                     Mean   :1385.8   Mean   :0.3926   Mean   : 969.0  
     ##                     3rd Qu.:2009.5   3rd Qu.:1.0000   3rd Qu.:1485.5  
     ##                     Max.   :4438.0   Max.   :1.0000   Max.   :4163.0  
-    ##                                                                       
     ##    Progressed         Sex            Age        Treatment line Brain metastases
     ##  Min.   :0.0000   Female: 932   Min.   :24.58   First:1697     No :1854        
-    ##  1st Qu.:0.0000   Male  :1193   1st Qu.:59.89   Other: 430     Yes: 273        
+    ##  1st Qu.:0.0000   Male  :1193   1st Qu.:60.13   Other: 430     Yes: 273        
     ##  Median :1.0000   NA's  :   2   Median :69.00                                  
-    ##  Mean   :0.5811                 Mean   :67.12                                  
-    ##  3rd Qu.:1.0000                 3rd Qu.:75.44                                  
+    ##  Mean   :0.5811                 Mean   :67.44                                  
+    ##  3rd Qu.:1.0000                 3rd Qu.:75.68                                  
     ##  Max.   :1.0000                 Max.   :94.10                                  
-    ##                                 NA's   :2                                      
     ##  ECOG Performance Status Objective_response      Tumor      CPI Regimen       
     ##  PS=0:1101               CR: 728            Melanoma:1199   Length:2127       
     ##  PS≥1:1017               PR:1399            NSCLC   : 667   Class :character  
     ##  NA's:   9                                  RCC     : 261   Mode  :character  
-    ##                                                                               
     ##                                                                               
     ##                                                                               
     ##                                                                               
@@ -236,8 +233,7 @@ summary(dataDF)
     ##  Median : 39.78   Median : 23.85  
     ##  Mean   : 45.53   Mean   : 31.83  
     ##  3rd Qu.: 66.02   3rd Qu.: 48.80  
-    ##  Max.   :145.80   Max.   :136.76  
-    ## 
+    ##  Max.   :145.80   Max.   :136.76
 
 ``` r
 names(dataDF)[names(dataDF) == 'Objective_response'] <- 'DOR'
@@ -309,6 +305,9 @@ cols_with_na <- c(cols_with_na_lung, cols_with_na_mel, cols_with_na_rcc)
 dataDF_extended <- dataDF_extended %>%
   mutate(across(all_of(cols_with_na), as.factor))
 
+#reorder for consistency 
+dataDF_extended$Tumor <- factor(dataDF_extended$Tumor, levels = c("Melanoma","RCC","NSCLC"))
+
 Baseline_Characteristics_table_Partial_patients <- descrTable(descr_formula_ext , data = dataDF_extended,include.miss=T, method=2, lab.missing = "Missing data", show.p.mul=T, show.p.overall=F)
 
 Baseline_Characteristics_pvals <- descrTable(descr_formula , data = dataDF_extended,include.miss=T, method=2, lab.missing = "Missing data", show.p.mul=T, show.p.overall=F)
@@ -358,30 +357,30 @@ Baseline_Characteristics_table_Partial_patients
     ## --------Summary descriptives table by 'Tumor'---------
     ## 
     ## _____________________________________________________________________________ 
-    ##                                Melanoma          NSCLC             RCC        
-    ##                                 N=1199           N=667            N=261       
+    ##                                Melanoma           RCC             NSCLC       
+    ##                                 N=1199           N=261            N=667       
     ## ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯ 
     ## Sex:                                                                          
-    ##     Female                   487 (40.6%)      386 (57.9%)       59 (22.6%)    
-    ##     Male                     712 (59.4%)      281 (42.1%)      200 (76.6%)    
-    ##     Missing data               0 (0.0%)         0 (0.0%)         2 (0.7%)     
-    ## Age                        70.0 [59.1;76.9] 69.0 [63.0;75.0] 63.0 [55.0;69.5] 
+    ##     Female                   487 (40.6%)       59 (22.6%)      386 (57.9%)    
+    ##     Male                     712 (59.4%)      200 (76.6%)      281 (42.1%)    
+    ##     Missing data               0 (0.0%)         2 (0.7%)         0 (0.0%)     
+    ## Age                        70.0 [59.1;76.9] 65.4 [58.4;72.3] 69.0 [63.0;75.0] 
     ## Treatment line:                                                               
-    ##     First                    1031 (86.0%)     477 (71.5%)      189 (72.4%)    
-    ##     Other                    168 (14.0%)      190 (28.5%)       72 (27.6%)    
+    ##     First                    1031 (86.0%)     189 (72.4%)      477 (71.5%)    
+    ##     Other                    168 (14.0%)       72 (27.6%)      190 (28.5%)    
     ## Brain metastases:                                                             
-    ##     No                       1011 (84.3%)     593 (88.9%)      250 (95.8%)    
-    ##     Yes                      188 (15.7%)       74 (11.1%)       11 (4.2%)     
+    ##     No                       1011 (84.3%)     250 (95.8%)      593 (88.9%)    
+    ##     Yes                      188 (15.7%)       11 (4.2%)        74 (11.1%)    
     ## ECOG Performance Status:                                                      
-    ##     PS=0                     787 (65.6%)      186 (27.9%)      128 (49.0%)    
-    ##     PS≥1                     409 (34.1%)      478 (71.7%)      130 (49.8%)    
-    ##     Missing data               3 (0.2%)         3 (0.4%)         3 (1.1%)     
+    ##     PS=0                     787 (65.6%)      128 (49.0%)      186 (27.9%)    
+    ##     PS≥1                     409 (34.1%)      130 (49.8%)      478 (71.7%)    
+    ##     Missing data               3 (0.2%)         3 (1.1%)         3 (0.4%)     
     ## Objective Response:                                                           
-    ##     CR                       576 (48.0%)       73 (10.9%)       79 (30.3%)    
-    ##     PR                       623 (52.0%)      594 (89.1%)      182 (69.7%)    
+    ##     CR                       576 (48.0%)       79 (30.3%)       73 (10.9%)    
+    ##     PR                       623 (52.0%)      182 (69.7%)      594 (89.1%)    
     ## CPI Regimen:                                                                  
-    ##     Anti-PD1                 789 (65.8%)      667 (100.0%)      61 (23.4%)    
-    ##     Anti-PD1+Anti-CTLA4      410 (34.2%)        0 (0.0%)       200 (76.6%)    
+    ##     Anti-PD1                 789 (65.8%)       61 (23.4%)      667 (100.0%)   
+    ##     Anti-PD1+Anti-CTLA4      410 (34.2%)      200 (76.6%)        0 (0.0%)     
     ## Previous adjuvant therapy:                                                    
     ##     No                       1098 (91.6%)          NA               NA        
     ##     Yes                       101 (8.4%)           NA               NA        
@@ -401,21 +400,21 @@ Baseline_Characteristics_table_Partial_patients
     ##     Normal                   821 (68.5%)           NA               NA        
     ##     Missing data              39 (3.2%)            NA               NA        
     ## PD-L1 status:                                                                 
-    ##     PDL1<50%                      NA           87 (13.0%)           NA        
-    ##     PDL1≥50%                      NA          546 (81.9%)           NA        
-    ##     Missing data                  NA           34 (5.1%)            NA        
+    ##     PDL1<50%                      NA               NA           87 (13.0%)    
+    ##     PDL1≥50%                      NA               NA          546 (81.9%)    
+    ##     Missing data                  NA               NA           34 (5.1%)     
     ## NSCLC subtype:                                                                
-    ##     Nonsquamous                   NA          546 (81.9%)           NA        
-    ##     Squamous                      NA          121 (18.1%)           NA        
+    ##     Nonsquamous                   NA               NA          546 (81.9%)    
+    ##     Squamous                      NA               NA          121 (18.1%)    
     ## RCC subtype:                                                                  
-    ##     Clear cell                    NA               NA          225 (86.2%)    
-    ##     Non clear cell                NA               NA           36 (13.8%)    
+    ##     Clear cell                    NA          225 (86.2%)           NA        
+    ##     Non clear cell                NA           36 (13.8%)           NA        
     ## Sarcomatoid subtype:                                                          
-    ##     Non sarcomatoid               NA               NA          182 (69.7%)    
-    ##     Sarcomatoid                   NA               NA           79 (30.3%)    
+    ##     Non sarcomatoid               NA          182 (69.7%)           NA        
+    ##     Sarcomatoid                   NA           79 (30.3%)           NA        
     ## IMDC:                                                                         
-    ##     Good/Intermediate             NA               NA          187 (71.6%)    
-    ##     Poor                          NA               NA           74 (28.4%)    
+    ##     Good/Intermediate             NA          187 (71.6%)           NA        
+    ##     Poor                          NA           74 (28.4%)           NA        
     ## ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
 
 # Survival analysis using unmatched patient data
@@ -813,10 +812,16 @@ final_plot <- p_km + p_forest2 +
     title = "PFS curves with corresponding HRs (including reference)"
   )
 
-print(final_plot)
+print(p_km)
 ```
 
 ![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/Survival%20analysis%20-%20PFS-1.png)<!-- -->
+
+``` r
+print(final_plot)
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/Survival%20analysis%20-%20PFS-2.png)<!-- -->
 
 ``` r
 #perform pairwise comparisons among the PFS curves
@@ -908,7 +913,47 @@ fit_PFS <- survfit(
 print(final_plot)
 ```
 
-![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/Survival%20analysis%20-%20PFS-2.png)<!-- -->
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/Survival%20analysis%20-%20PFS-3.png)<!-- -->
+
+``` r
+PFS_all +
+    add_censor_mark() +
+    add_confidence_interval()+
+    scale_ggsurvfit() +
+    add_risktable(
+        size            = 7,
+        theme           = theme_risktable_default(axis.text.y.size = 10,
+                                                  plot.title.size  = 20),
+        risktable_stats = "{n.risk}",  # ({cum.event}) removed because of space
+        stats_label = "Number at risk"
+    ) +
+    add_risktable_strata_symbol(symbol = "•", size = 20) +
+    labs(
+        x        = "Months after treatment initiation",
+        y        = paste0("PFS", "(%)")
+    ) +
+    scale_x_continuous(breaks = seq(0, 60, by = 12), limits = c(0, 60)) +
+    theme_classic() +
+    theme(
+        plot.title      = element_text(hjust = 0.5, size = 18),
+        plot.subtitle   = element_text(hjust = 0.5, size = 30),
+        axis.title.x    = element_text(size = 20),
+        axis.title.y    = element_text(size = 20, margin = margin(t = 0, r = 0, b = 0, l = 0)),
+        axis.text.x     = element_text(size = 15),
+        axis.text.y     = element_text(size = 15),
+        legend.position = "bottom",
+        legend.direction= "horizontal",
+        legend.text     = element_text(size = 18),
+        legend.key.size = unit(10, "bigpts"),
+        legend.title    = element_blank(),
+        plot.margin = unit(c(0,0.2,0,1), 'lines')
+    ) +
+    labs(
+    title = "Progression free survival before propensity matching"
+  ) 
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/Survival%20analysis%20-%20PFS-4.png)<!-- -->
 
 ### PFS - paired analysis stratified by response before PSM
 

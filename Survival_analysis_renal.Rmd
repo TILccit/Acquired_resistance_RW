@@ -32,7 +32,7 @@ We first need to define which columns we want as character (categorical), and wh
 
 ```{r Data loading and correction,warning=F, message=F,eval=TRUE}
 setwd("E:/PhD_projects/Realworld/Data/")
-dataDF <- read.xlsx("renal.xlsx")
+dataDF <- read.xlsx("renal_md_agecorrect_final.xlsx")
 
 # Check for duplicates
 any(duplicated(dataDF$patient_id))
@@ -208,9 +208,7 @@ dataDF$sex <- NULL
 names(dataDF)[names(dataDF) == 'age_1st_treat'] <- 'Age'
 names(dataDF)[names(dataDF) == 'regime_correct'] <- 'CPI Regimen'
 names(dataDF)[names(dataDF) == 'PS'] <- 'ECOG Performance Status'
-# names(dataDF)[names(dataDF) == 'stage_2'] <- 'AJCC 8th stage'
 names(dataDF)[names(dataDF) == 'Brain_metastases'] <- 'Brain metastases'
-# names(dataDF)[names(dataDF) == 'braf_correct'] <- 'BRAF mutation'
 names(dataDF)[names(dataDF) == 'bor'] <- 'Objective response'
 names(dataDF)[names(dataDF) == 'line_correct'] <- 'Treatment line'
 names(dataDF)[names(dataDF) == 'clear_cell'] <- 'RCC subtype'

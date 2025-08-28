@@ -211,6 +211,9 @@ cols_with_na <- c(cols_with_na_lung, cols_with_na_mel, cols_with_na_rcc)
 dataDF_extended <- dataDF_extended %>%
   mutate(across(all_of(cols_with_na), as.factor))
 
+#reorder for consistency 
+dataDF_extended$Tumor <- factor(dataDF_extended$Tumor, levels = c("Melanoma","RCC","NSCLC"))
+
 Baseline_Characteristics_table_Partial_patients <- descrTable(descr_formula_ext , data = dataDF_extended,include.miss=T, method=2, lab.missing = "Missing data", show.p.mul=T, show.p.overall=F)
 
 Baseline_Characteristics_pvals <- descrTable(descr_formula , data = dataDF_extended,include.miss=T, method=2, lab.missing = "Missing data", show.p.mul=T, show.p.overall=F)
@@ -478,7 +481,7 @@ OS_PR +
 
 ## Progression free survival
 ### Combined survival analysis PFS
-```{r Survival analysis - PFS, warning=FALSE, message=FALSE, fig.width=15, fig.height=8, eval=TRUE}
+```{r Survival analysis - PFS, warning=FALSE, message=FALSE, fig.width=15, fig.height=12, eval=TRUE}
 # Administrative censoring at 60 months
 dataDF$censor_time_PFS   <- pmin(dataDF$PFS_months, 60)
 dataDF$censor_status_PFS <- ifelse(dataDF$PFS_months > 60, 0, dataDF$Progressed)
@@ -634,6 +637,7 @@ final_plot <- p_km + p_forest2 +
     title = "PFS curves with corresponding HRs (including reference)"
   )
 
+print(p_km)
 print(final_plot)
 
 #perform pairwise comparisons among the PFS curves
@@ -708,6 +712,42 @@ fit_PFS <- survfit(
 )
 
 print(final_plot)
+
+PFS_all +
+    add_censor_mark() +
+    add_confidence_interval()+
+    scale_ggsurvfit() +
+    add_risktable(
+        size            = 7,
+        theme           = theme_risktable_default(axis.text.y.size = 10,
+                                                  plot.title.size  = 20),
+        risktable_stats = "{n.risk}",  # ({cum.event}) removed because of space
+        stats_label = "Number at risk"
+    ) +
+    add_risktable_strata_symbol(symbol = "•", size = 20) +
+    labs(
+        x        = "Months after treatment initiation",
+        y        = paste0("PFS", "(%)")
+    ) +
+    scale_x_continuous(breaks = seq(0, 60, by = 12), limits = c(0, 60)) +
+    theme_classic() +
+    theme(
+        plot.title      = element_text(hjust = 0.5, size = 18),
+        plot.subtitle   = element_text(hjust = 0.5, size = 30),
+        axis.title.x    = element_text(size = 20),
+        axis.title.y    = element_text(size = 20, margin = margin(t = 0, r = 0, b = 0, l = 0)),
+        axis.text.x     = element_text(size = 15),
+        axis.text.y     = element_text(size = 15),
+        legend.position = "bottom",
+        legend.direction= "horizontal",
+        legend.text     = element_text(size = 18),
+        legend.key.size = unit(10, "bigpts"),
+        legend.title    = element_blank(),
+        plot.margin = unit(c(0,0.2,0,1), 'lines')
+    ) +
+    labs(
+    title = "Progression free survival before propensity matching"
+  ) 
 ```
 
 ### PFS - paired analysis stratified by response before PSM

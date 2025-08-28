@@ -34,7 +34,7 @@ any(duplicated(dataDF$patient_id))
 # Remove duplicates
 dataDF <- dataDF[!duplicated(dataDF), ]
 dim(dataDF)
-# 264  49
+
 
 names(dataDF)[names(dataDF) == 'bedste_respons'] <- 'bor'
 #correct PDL1 column
