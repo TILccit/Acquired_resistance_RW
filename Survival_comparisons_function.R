@@ -7,7 +7,7 @@ run_survival_comparisons <- function(dataDF,
   endpoint <- match.arg(endpoint)
   stopifnot(require(survival), require(ggsurvfit),
             require(ggplot2),    require(dplyr),
-            require(ggpubr))
+            require(ggpubr),  require(survminer))
   if (!is.null(descr_formula)) stopifnot(require(compareGroups))
   
   # prepare names & palette

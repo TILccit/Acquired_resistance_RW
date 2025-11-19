@@ -71,7 +71,8 @@ run_psm_and_survival <- function(dataDF,
                                  mahvars=NULL,
                                  endpoint         = c("OS", "PFS"),
                                  truncate_month   = NULL,
-                                 caliper = 0.2) {
+                                 caliper = 0.2,
+                                 ratio = 1) {
   endpoint <- match.arg(endpoint)
   stopifnot(require(MatchIt), require(cobalt),
             require(survival), require(ggsurvfit),
@@ -109,7 +110,7 @@ run_psm_and_survival <- function(dataDF,
       method      = "nearest",
       distance    = "glm",
       link="linear.logit",
-      ratio       = 1,
+      ratio       = ratio,
       caliper     = 0.2,
       std.caliper = TRUE,
       mahvars = mahvars
@@ -269,6 +270,7 @@ run_psm_and_survival <- function(dataDF,
     love_plots          = love_plots,
     surv_plots          = surv_plots,
     descriptive_tables  = descriptive_tables,
-    combined_surv_plot  = combined_surv
+    combined_surv_plot  = combined_surv,
+    matched_dfs         = matched_dfs
   )
 }
