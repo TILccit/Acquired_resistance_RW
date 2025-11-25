@@ -32,7 +32,7 @@ We first need to define which columns we want as character (categorical), and wh
 
 ```{r Data loading and correction,warning=F, message=F,eval=TRUE}
 setwd("E:/PhD_projects/Realworld/Data/")
-dataDF <- read.xlsx("renal_md_agecorrect_final.xlsx")
+dataDF <- read.xlsx("renal_md_agecorrect_DSS.xlsx")
 
 # Check for duplicates
 any(duplicated(dataDF$patient_id))
@@ -61,12 +61,13 @@ OS_time <- c("OS_days")
 OS_status <- c("Dead")
 PFS_time <- c("PFS_days")
 PFS_status <- c("Progressed")
+RCC_status <- "Dead_RCC"
 
 ## DEFINE WHICH COLUMNS ARE CATEGORICAL
 categ_feats <-c("sex","regime_correct","PS", "bor", "line_correct",features_cancer_spec)
 
 ## DEFINE WHICH COLUMNS ARE NUMERICAL
-numeric_feats <- c("OS_days", "Dead","PFS_days","Progressed","age_1st_treat")
+numeric_feats <- c("OS_days", "Dead","PFS_days","Progressed","Dead_RCC","age_1st_treat")
 
 # Remove spaces from column names and features.
 colnames(dataDF) <- gsub(" ","_",colnames(dataDF))
@@ -93,7 +94,7 @@ dataDF <- dataDF %>% mutate(across(all_of(categ_feats), as.character))
 
 # Transform character columns to categorical, to have the different levels
 dataDF <- dataDF %>% dplyr::mutate(across(all_of(categ_feats), as.factor))
-dataDF <- dataDF %>% dplyr::select(all_of(c(colnames(dataDF)[1], OS_time,OS_status, PFS_time,PFS_status, features, features_cancer_spec))) %>% distinct()
+dataDF <- dataDF %>% dplyr::select(all_of(c(colnames(dataDF)[1], OS_time,OS_status,RCC_status, PFS_time,PFS_status, features, features_cancer_spec))) %>% distinct()
 
 
 print("Numbers per treatment")
@@ -224,6 +225,8 @@ dataDF$censor_status_OS <- ifelse(dataDF$OS_days/30 > 60, 0, dataDF$Dead)
 #Administrative censoring at 60 months
 dataDF$censor_time_PFS   <- pmin(dataDF$PFS_days/30, 60)
 dataDF$censor_status_PFS <- ifelse(dataDF$PFS_days/30 > 60, 0, dataDF$Progressed)
+#Administrative censoring at 60 months
+dataDF$censor_status_RSS <- ifelse(dataDF$OS_days/30 > 60, 0, dataDF$Dead_RCC)
 ```
 
 ```{r select descriptive features,warning=F, message=F,eval=TRUE}
@@ -818,6 +821,267 @@ saveWorkbook(
 )
 ```
 
+# RSS analysis
+##Multiple Univariate analysis - Including missing data
+```{r Multiple Univariate analysis - Including missing data RSS}
+surv_time <- "censor_time_OS"
+surv_status <- "censor_status_RSS"
+surv_time_label <- "OS"
+# Find the best reference for each feature
+best_refs <- character(length(features))
+names(best_refs) <- features
+
+for (i in seq_along(features)) {
+  var <- features[i]
+
+  # Skip this iteration if this column isn't a factor
+  if (! is.factor(dataDF[[var]])) {
+    next
+  }
+
+  vals <- na.omit(unique(dataDF[[var]]))
+  # ensure factor
+  vals <- as.character(vals)
+
+  # storage for max HR per candidate ref
+  hr_max <- numeric(length(vals))
+
+  for (j in seq_along(vals)) {
+    ref_level <- vals[j]
+    df2 <- dataDF
+    if(!"ordered" %in% class(df2[[var]])){
+      df2[[var]] <- relevel(as.factor(df2[[var]]), ref = ref_level)
+    }
+
+    uni <- analyse_survival(
+      df2,
+      time_status = c(surv_time, surv_status),
+      by          = .data[[var]]
+    )
+
+    fit   <- uni$coxph    # the coxph object
+    coefs <- coef(fit)    # log HRs
+    hrs   <- exp(coefs)   # HRs
+    hr_max[j] <- if (length(hrs) > 0) max(hrs, na.rm = TRUE) else NA
+  }
+
+  # pick the ref that yielded the largest HR
+  best_refs[var] <- vals[which.max(hr_max)]
+}
+
+# Re‐level dataDF based on those best refs
+for (var in features) {
+  if (! is.factor(dataDF[[var]])) {
+    next
+  }
+  if(!"ordered" %in% class(dataDF[[var]])){
+    dataDF[[var]] <- relevel(
+    as.factor(dataDF[[var]]),
+    ref = best_refs[var]
+  )
+  }
+}
+
+multiple_uni <- map(features, function(by){analyse_multivariate(dataDF,
+                       c(surv_time,surv_status),
+                       covariates = list(by), # covariates expects a list
+                       covariate_name_dict = NULL,
+                       covariate_label_dict = NULL)})
+max_cis <- max(sapply(
+  multiple_uni,
+  function(x) max(x$summary$conf.int, na.rm = TRUE))
+)
+min_cis <- min(sapply(
+  multiple_uni,
+  function(x) min(x$summary$conf.int, na.rm = TRUE))
+)
+
+HR_x_limits <- c(min_cis, max_cis) * c(1/1.5, 1.5)
+HR_x_breaks <- round(10^pretty(log10(HR_x_limits), n = 7),digits = 1)
+
+forest_plot(multiple_uni,
+            #factor_labeller = covariate_names,
+            endpoint_labeller = c(time=surv_time_label),
+            # orderer = ~order(HR),
+            labels_displayed = c("factor"),#"endpoint",
+            ggtheme = ggplot2::theme_bw(base_size = 10),
+            #values_displayed = c("HR","CI","p"),
+            HR_x_limits = c(min_cis*1.5,max_cis*1.5),
+            HR_x_breaks = c(1,2,ceiling(10^pretty(log10(HR_x_limits), n = 7)*2/2))
+            #p_lessthan_cutoff = 0.05
+            )
+
+#save this for the comparison at the end with the 18 month landmark
+
+hr_OS_resp <-multiple_uni[[length(multiple_uni)]]$coxph
+```
+## Multivariate Survival Analysis - only complete cases
+
+```{r  Multivariate Survival Analysis - only complete cases RSS, fig.width=10, fig.height=8, warning=FALSE, message=FALSE, eval=TRUE}
+# # To remove both (NAs and empty):
+dataDF_complete <- dataDF %>%
+  drop_na() %>%  # Remove NA values
+  filter_all(all_vars(. != "")) %>%  # Remove empty strings
+  filter_all(all_vars(trimws(.) != ""))  # Remove strings with only spaces
+
+dim(dataDF_complete)
+
+multiv_feats_sign <- c()
+for (i in seq_along(features)){
+  coef <- as.data.frame(multiple_uni[[i]]$summary$coefficients)
+  if(nrow(coef) >1){
+    pval <- min(coef$`Pr(>|z|)`)
+  } else {
+  pval <- coef$`Pr(>|z|)`
+  }
+  if(any(pval < 0.2)){
+    multiv_feats_sign <- c(multiv_feats_sign, multiple_uni[[i]]$overall$covariates)
+  }
+}
+
+multiv_feats_sign_formula <- paste0("`", multiv_feats_sign, "`", collapse = " + ")
+fmla_sign <- as.formula(paste0(
+  "Surv(dataDF_complete[[surv_time]], dataDF_complete[[surv_status]]) ~ ",
+  multiv_feats_sign_formula
+))
+
+multiv_feats_all<- paste0("`", features, "`", collapse = " + ")
+fmla_all <- as.formula(paste0(
+  "Surv(dataDF_complete[[surv_time]], dataDF_complete[[surv_status]]) ~ ",
+  multiv_feats_all
+))
+
+cox_model_all <- coxph(fmla_all, data = dataDF_complete)
+cox_model_sign <- coxph(fmla_sign, data = dataDF_complete)
+
+summary(cox_model_all)
+summary(cox_model_sign)
+
+forest_model_all <- forest_model(cox_model_all,  # Set x-axis limits
+                             exponentiate = TRUE)  # Display hazard ratios on log scale)
+forest_model_sign <- forest_model(cox_model_sign,  # Set x-axis limits
+                             exponentiate = TRUE)  # Display hazard ratios on log scale)
+
+# Display the plot
+print(forest_model_all)
+print(forest_model_sign)
+```
+
+# Combined Univariable vs Multivariable Forest Plots - RSS
+```{r Combined Univariable vs Multivariable Forest Plots - RSS, fig.width=10, fig.height=7, warning=FALSE, message=FALSE, eval=TRUE}
+# Prepare empty list to collect rows
+rows <- vector("list", 0)
+
+# Summaries of the multivariable model
+s_multi    <- summary(cox_model_sign)
+coef_multi <- s_multi$coefficients      # matrix with exp(coef) and p
+ci_multi   <- s_multi$conf.int          # matrix with lower/upper .95
+
+# Loop over each univariable result
+for (i in seq_along(multiple_uni)) {
+  u    <- multiple_uni[[i]]
+  cov  <- u$overall$covariates           # the covariate name
+  fit  <- u$coxph
+  s_u  <- summary(fit)
+  coef_u <- s_u$coefficients             # matrix with exp(coef) etc.
+  ci_u   <- s_u$conf.int
+  if(u$summaryAsFrame$factor.value[1] == "<continuous>"){
+    reference <- "NA"
+    levs <- "Fitted as continuous"
+  } else {
+    reference <- levels(as.factor(u$data[,ncol(u$data)]))[1]
+    levs <- setdiff(unique(u$data[,ncol(u$data)]), reference)
+  }
+  # for each row (level) in the univariable fit:
+  for (j in seq_len(nrow(coef_u))) {
+    HRu  <- coef_u[j, "exp(coef)"]
+    LUu  <- ci_u[j,   "lower .95"]
+    UCu  <- ci_u[j,   "upper .95"]
+    pu   <- coef_u[j, "Pr(>|z|)"]
+    
+    if (cov %in% multiv_feats_sign) {
+      HRm <- coef_multi[grep(cov, rownames(coef_multi))[j], "exp(coef)"]
+      LUm <- ci_multi[ grep(cov, rownames(coef_multi))[j], "lower .95"]
+      UCm <- ci_multi[ grep(cov, rownames(coef_multi))[j], "upper .95"]
+      pm  <- coef_multi[grep(cov, rownames(coef_multi))[j], "Pr(>|z|)"]
+    } else {
+      HRm <- NA; LUm <- NA; UCm <- NA; pm <- NA
+    }
+    
+    rows[[length(rows) + 1]] <- data.frame(
+      Covariate       = cov,
+      Level           = levs[j],
+      Reference       = reference,
+      HR_uni          = HRu,
+      CI_lo_uni       = LUu,
+      CI_hi_uni       = UCu,
+      p_uni           = pu,
+      HR_multi        = HRm,
+      CI_lo_multi     = LUm,
+      CI_hi_multi     = UCm,
+      p_multi         = pm,
+      stringsAsFactors = FALSE
+    )
+  }
+}
+
+# Bind into one data.frame
+results_df <- do.call(rbind, rows)
+
+# Format up to three digits
+results_df <- results_df %>%
+  mutate(across(starts_with("HR_") | starts_with("CI_") | matches("^p_"),
+                ~ signif(.x, 3)))
+
+results_df$CI_lo_uni <- paste0(results_df$CI_lo_uni, "-", results_df$CI_hi_uni)
+results_df$CI_hi_uni <- NULL
+results_df$CI_lo_multi <- paste0(results_df$CI_lo_multi, "-", results_df$CI_hi_multi)
+results_df$CI_hi_multi <- NULL
+colnames(results_df) <- c("Covariate", "Level", "Reference" , "Univariable HR", "Univariable CI", "Univariable P-value", "Multivariable HR", "Multivariable CI", "Multivariable P-value")
+
+last_col <- ncol(results_df)
+results_df <- results_df %>%
+  mutate(across(
+    .cols = -last_col,
+    .fns  = ~ ifelse(is.na(.) | grepl("NA", ., fixed = TRUE), "", .)
+  )) %>%
+  mutate(across(
+    .cols = last_col,
+    .fns  = ~ ifelse(is.na(.), "Excluded from multivariable analysis", as.character(.))
+  ))
+
+results_df <- results_df %>%
+  group_by(Covariate) %>%
+  mutate(Covariate = ifelse(row_number() == 1, Covariate, "")) %>%
+  ungroup()
+
+n_cols <- ncol(results_df)
+
+# align: left for first two, center for the rest
+aligns <- c("l", "l", rep("c", n_cols - 2))
+
+results_df %>%
+  kable(
+    format = "html",
+    caption = "Univariable vs Multivariable Cox Results - OS",
+    align   = aligns,
+    escape  = FALSE
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width        = FALSE
+  ) %>%
+  # make header row bold and centered
+  row_spec(
+    0,
+    bold  = TRUE,
+    align = "center"
+  ) %>%
+  # add vertical lines right of col 3 and col 6
+  column_spec(3, border_right = TRUE) %>%
+  column_spec(6, border_right = TRUE)
+```
+
 
 # Five-Year Survival Estimates by Response
 
@@ -875,6 +1139,7 @@ five_year_table <- bind_rows(results) %>%
          PFS_5yr_pct, PFS_5yr_Lower_pct, PFS_5yr_Upper_pct)
 print(five_year_table)
 ```
+
 
 ```{r - 5 year KM curves, fig.width=10, fig.height=8}
 # pull out labels from five_year_table

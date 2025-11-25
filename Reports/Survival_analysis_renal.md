@@ -1,7 +1,7 @@
 Survival analysis renal
 ================
 Mario Presti
-First created on Feb 2025. Updated on 27 August 2025
+First created on Feb 2025. Updated on 25 November 2025
 
 - [Introduction](#introduction)
 - [Loading Libraries](#loading-libraries)
@@ -18,6 +18,11 @@ First created on Feb 2025. Updated on 27 August 2025
   - [All responders - PFS](#all-responders---pfs)
 - [Combined Univariable vs Multivariable Forest Plots -
   PFS](#combined-univariable-vs-multivariable-forest-plots---pfs)
+- [RSS analysis](#rss-analysis)
+  - [Multivariate Survival Analysis - only complete
+    cases](#multivariate-survival-analysis---only-complete-cases-1)
+- [Combined Univariable vs Multivariable Forest Plots -
+  RSS](#combined-univariable-vs-multivariable-forest-plots---rss)
 - [Five-Year Survival Estimates by
   Response](#five-year-survival-estimates-by-response)
 
@@ -47,7 +52,7 @@ messed up with excel files.
 
 ``` r
 setwd("E:/PhD_projects/Realworld/Data/")
-dataDF <- read.xlsx("renal_md_agecorrect_final.xlsx")
+dataDF <- read.xlsx("renal_md_agecorrect_DSS.xlsx")
 
 # Check for duplicates
 any(duplicated(dataDF$patient_id))
@@ -61,7 +66,7 @@ dataDF <- dataDF[!duplicated(dataDF), ]
 dim(dataDF)
 ```
 
-    ## [1] 261  49
+    ## [1] 261  50
 
 ``` r
 # Rename some columns
@@ -84,12 +89,13 @@ OS_time <- c("OS_days")
 OS_status <- c("Dead")
 PFS_time <- c("PFS_days")
 PFS_status <- c("Progressed")
+RCC_status <- "Dead_RCC"
 
 ## DEFINE WHICH COLUMNS ARE CATEGORICAL
 categ_feats <-c("sex","regime_correct","PS", "bor", "line_correct",features_cancer_spec)
 
 ## DEFINE WHICH COLUMNS ARE NUMERICAL
-numeric_feats <- c("OS_days", "Dead","PFS_days","Progressed","age_1st_treat")
+numeric_feats <- c("OS_days", "Dead","PFS_days","Progressed","Dead_RCC","age_1st_treat")
 
 # Remove spaces from column names and features.
 colnames(dataDF) <- gsub(" ","_",colnames(dataDF))
@@ -116,7 +122,7 @@ dataDF <- dataDF %>% mutate(across(all_of(categ_feats), as.character))
 
 # Transform character columns to categorical, to have the different levels
 dataDF <- dataDF %>% dplyr::mutate(across(all_of(categ_feats), as.factor))
-dataDF <- dataDF %>% dplyr::select(all_of(c(colnames(dataDF)[1], OS_time,OS_status, PFS_time,PFS_status, features, features_cancer_spec))) %>% distinct()
+dataDF <- dataDF %>% dplyr::select(all_of(c(colnames(dataDF)[1], OS_time,OS_status,RCC_status, PFS_time,PFS_status, features, features_cancer_spec))) %>% distinct()
 
 
 print("Numbers per treatment")
@@ -151,33 +157,33 @@ table(dataDF$bor)
 summary(dataDF)
 ```
 
-    ##   record_id            OS_days          Dead           PFS_days     
-    ##  Length:261         Min.   : 164   Min.   :0.0000   Min.   :  60.0  
-    ##  Class :character   1st Qu.:1021   1st Qu.:0.0000   1st Qu.: 384.0  
-    ##  Mode  :character   Median :1370   Median :0.0000   Median : 918.0  
-    ##                     Mean   :1372   Mean   :0.3333   Mean   : 953.8  
-    ##                     3rd Qu.:1770   3rd Qu.:1.0000   3rd Qu.:1412.0  
-    ##                     Max.   :3313   Max.   :1.0000   Max.   :2756.0  
-    ##    Progressed       sex      age_1st_treat   line_correct   regime_correct
-    ##  Min.   :0.0000   1   :200   Min.   :27.42   First:189    ipi/nivo :200   
-    ##  1st Qu.:0.0000   2   : 59   1st Qu.:58.41   Other: 72    nivolumab: 61   
-    ##  Median :1.0000   NA's:  2   Median :65.43                                
-    ##  Mean   :0.6054              Mean   :64.78                                
-    ##  3rd Qu.:1.0000              3rd Qu.:72.32                                
-    ##  Max.   :1.0000              Max.   :85.89                                
-    ##  Brain_metastases      PS      bor      clear_cell sarcomatoid smoking   
-    ##  Length:261         0   :128   CR: 79   ja :225    ja : 79     0   : 74  
-    ##  Class :character   1   :111   PR:182   nej: 36    nej:182     1   : 39  
-    ##  Mode  :character   2   : 18                                   2   :125  
-    ##                     3   :  1                                   99  :  5  
-    ##                     NA's:  3                                   NA's: 18  
-    ##                                                                          
-    ##                 IMDC    
-    ##  Good/Intermediate:187  
-    ##  Poor             : 74  
-    ##                         
-    ##                         
-    ##                         
+    ##   record_id            OS_days          Dead           Dead_RCC     
+    ##  Length:261         Min.   : 164   Min.   :0.0000   Min.   :0.0000  
+    ##  Class :character   1st Qu.:1021   1st Qu.:0.0000   1st Qu.:0.0000  
+    ##  Mode  :character   Median :1370   Median :0.0000   Median :0.0000  
+    ##                     Mean   :1372   Mean   :0.3333   Mean   :0.3027  
+    ##                     3rd Qu.:1770   3rd Qu.:1.0000   3rd Qu.:1.0000  
+    ##                     Max.   :3313   Max.   :1.0000   Max.   :1.0000  
+    ##     PFS_days        Progressed       sex      age_1st_treat   line_correct
+    ##  Min.   :  60.0   Min.   :0.0000   1   :200   Min.   :27.42   First:189   
+    ##  1st Qu.: 384.0   1st Qu.:0.0000   2   : 59   1st Qu.:58.41   Other: 72   
+    ##  Median : 918.0   Median :1.0000   NA's:  2   Median :65.43               
+    ##  Mean   : 953.8   Mean   :0.6054              Mean   :64.78               
+    ##  3rd Qu.:1412.0   3rd Qu.:1.0000              3rd Qu.:72.32               
+    ##  Max.   :2756.0   Max.   :1.0000              Max.   :85.89               
+    ##    regime_correct Brain_metastases      PS      bor      clear_cell sarcomatoid
+    ##  ipi/nivo :200    Length:261         0   :128   CR: 79   ja :225    ja : 79    
+    ##  nivolumab: 61    Class :character   1   :111   PR:182   nej: 36    nej:182    
+    ##                   Mode  :character   2   : 18                                  
+    ##                                      3   :  1                                  
+    ##                                      NA's:  3                                  
+    ##                                                                                
+    ##  smoking                   IMDC    
+    ##  0   : 74   Good/Intermediate:187  
+    ##  1   : 39   Poor             : 74  
+    ##  2   :125                          
+    ##  99  :  5                          
+    ##  NA's: 18                          
     ## 
 
 ``` r
@@ -300,6 +306,8 @@ dataDF$censor_status_OS <- ifelse(dataDF$OS_days/30 > 60, 0, dataDF$Dead)
 #Administrative censoring at 60 months
 dataDF$censor_time_PFS   <- pmin(dataDF$PFS_days/30, 60)
 dataDF$censor_status_PFS <- ifelse(dataDF$PFS_days/30 > 60, 0, dataDF$Progressed)
+#Administrative censoring at 60 months
+dataDF$censor_status_RSS <- ifelse(dataDF$OS_days/30 > 60, 0, dataDF$Dead_RCC)
 ```
 
 ``` r
@@ -421,6 +429,8 @@ forest_plot(multiple_uni,
     ## Please use `switch(typeof())` or `switch(my_typeof())` instead.
     ## This warning is displayed once every 8 hours.
 
+    ## `height` was translated to `width`.
+
 ![](Survival_analysis_renal_files/figure-gfm/Multiple%20Univariate%20analysis%20-%20Including%20missing%20data-1.png)<!-- -->
 
 ``` r
@@ -441,7 +451,7 @@ dataDF_complete <- dataDF %>%
 dim(dataDF_complete)
 ```
 
-    ## [1] 237  20
+    ## [1] 237  22
 
 ``` r
 multiv_feats_sign <- c()
@@ -1300,6 +1310,8 @@ forest_plot(multiple_uni,
             )
 ```
 
+    ## `height` was translated to `width`.
+
 ![](Survival_analysis_renal_files/figure-gfm/Multiple%20Univariate%20analysis%20-%20PFS-1.png)<!-- -->
 
 # Multivariate Survival Analysis
@@ -2140,6 +2152,873 @@ saveWorkbook(
 )
 ```
 
+# RSS analysis
+
+\##Multiple Univariate analysis - Including missing data
+
+``` r
+surv_time <- "censor_time_OS"
+surv_status <- "censor_status_RSS"
+surv_time_label <- "OS"
+# Find the best reference for each feature
+best_refs <- character(length(features))
+names(best_refs) <- features
+
+for (i in seq_along(features)) {
+  var <- features[i]
+
+  # Skip this iteration if this column isn't a factor
+  if (! is.factor(dataDF[[var]])) {
+    next
+  }
+
+  vals <- na.omit(unique(dataDF[[var]]))
+  # ensure factor
+  vals <- as.character(vals)
+
+  # storage for max HR per candidate ref
+  hr_max <- numeric(length(vals))
+
+  for (j in seq_along(vals)) {
+    ref_level <- vals[j]
+    df2 <- dataDF
+    if(!"ordered" %in% class(df2[[var]])){
+      df2[[var]] <- relevel(as.factor(df2[[var]]), ref = ref_level)
+    }
+
+    uni <- analyse_survival(
+      df2,
+      time_status = c(surv_time, surv_status),
+      by          = .data[[var]]
+    )
+
+    fit   <- uni$coxph    # the coxph object
+    coefs <- coef(fit)    # log HRs
+    hrs   <- exp(coefs)   # HRs
+    hr_max[j] <- if (length(hrs) > 0) max(hrs, na.rm = TRUE) else NA
+  }
+
+  # pick the ref that yielded the largest HR
+  best_refs[var] <- vals[which.max(hr_max)]
+}
+
+# Re‐level dataDF based on those best refs
+for (var in features) {
+  if (! is.factor(dataDF[[var]])) {
+    next
+  }
+  if(!"ordered" %in% class(dataDF[[var]])){
+    dataDF[[var]] <- relevel(
+    as.factor(dataDF[[var]]),
+    ref = best_refs[var]
+  )
+  }
+}
+
+multiple_uni <- map(features, function(by){analyse_multivariate(dataDF,
+                       c(surv_time,surv_status),
+                       covariates = list(by), # covariates expects a list
+                       covariate_name_dict = NULL,
+                       covariate_label_dict = NULL)})
+max_cis <- max(sapply(
+  multiple_uni,
+  function(x) max(x$summary$conf.int, na.rm = TRUE))
+)
+min_cis <- min(sapply(
+  multiple_uni,
+  function(x) min(x$summary$conf.int, na.rm = TRUE))
+)
+
+HR_x_limits <- c(min_cis, max_cis) * c(1/1.5, 1.5)
+HR_x_breaks <- round(10^pretty(log10(HR_x_limits), n = 7),digits = 1)
+
+forest_plot(multiple_uni,
+            #factor_labeller = covariate_names,
+            endpoint_labeller = c(time=surv_time_label),
+            # orderer = ~order(HR),
+            labels_displayed = c("factor"),#"endpoint",
+            ggtheme = ggplot2::theme_bw(base_size = 10),
+            #values_displayed = c("HR","CI","p"),
+            HR_x_limits = c(min_cis*1.5,max_cis*1.5),
+            HR_x_breaks = c(1,2,ceiling(10^pretty(log10(HR_x_limits), n = 7)*2/2))
+            #p_lessthan_cutoff = 0.05
+            )
+```
+
+    ## `height` was translated to `width`.
+
+![](Survival_analysis_renal_files/figure-gfm/Multiple%20Univariate%20analysis%20-%20Including%20missing%20data%20RSS-1.png)<!-- -->
+
+``` r
+#save this for the comparison at the end with the 18 month landmark
+
+hr_OS_resp <-multiple_uni[[length(multiple_uni)]]$coxph
+```
+
+## Multivariate Survival Analysis - only complete cases
+
+``` r
+# # To remove both (NAs and empty):
+dataDF_complete <- dataDF %>%
+  drop_na() %>%  # Remove NA values
+  filter_all(all_vars(. != "")) %>%  # Remove empty strings
+  filter_all(all_vars(trimws(.) != ""))  # Remove strings with only spaces
+
+dim(dataDF_complete)
+```
+
+    ## [1] 237  22
+
+``` r
+multiv_feats_sign <- c()
+for (i in seq_along(features)){
+  coef <- as.data.frame(multiple_uni[[i]]$summary$coefficients)
+  if(nrow(coef) >1){
+    pval <- min(coef$`Pr(>|z|)`)
+  } else {
+  pval <- coef$`Pr(>|z|)`
+  }
+  if(any(pval < 0.2)){
+    multiv_feats_sign <- c(multiv_feats_sign, multiple_uni[[i]]$overall$covariates)
+  }
+}
+
+multiv_feats_sign_formula <- paste0("`", multiv_feats_sign, "`", collapse = " + ")
+fmla_sign <- as.formula(paste0(
+  "Surv(dataDF_complete[[surv_time]], dataDF_complete[[surv_status]]) ~ ",
+  multiv_feats_sign_formula
+))
+
+multiv_feats_all<- paste0("`", features, "`", collapse = " + ")
+fmla_all <- as.formula(paste0(
+  "Surv(dataDF_complete[[surv_time]], dataDF_complete[[surv_status]]) ~ ",
+  multiv_feats_all
+))
+
+cox_model_all <- coxph(fmla_all, data = dataDF_complete)
+cox_model_sign <- coxph(fmla_sign, data = dataDF_complete)
+
+summary(cox_model_all)
+```
+
+    ## Call:
+    ## coxph(formula = fmla_all, data = dataDF_complete)
+    ## 
+    ##   n= 237, number of events= 65 
+    ## 
+    ##                                          coef exp(coef) se(coef)      z
+    ## SexFemale                             0.53350   1.70488  0.28454  1.875
+    ## Age                                   0.01099   1.01105  0.01414  0.777
+    ## `CPI Regimen`Anti-PD1                 0.57086   1.76979  0.44100  1.294
+    ## `Treatment line`Other                -0.14153   0.86803  0.44293 -0.320
+    ## `RCC subtype`Non clear cell           0.79564   2.21586  0.34276  2.321
+    ## `Sarcomatoid subtype`Non sarcomatoid -0.05052   0.95074  0.31327 -0.161
+    ## IMDCPoor                              0.80039   2.22641  0.26191  3.056
+    ## `ECOG Performance Status`PS≥1         0.01410   1.01420  0.27209  0.052
+    ## `Objective response`PR                3.74317  42.23152  1.01297  3.695
+    ##                                      Pr(>|z|)    
+    ## SexFemale                             0.06080 .  
+    ## Age                                   0.43724    
+    ## `CPI Regimen`Anti-PD1                 0.19551    
+    ## `Treatment line`Other                 0.74933    
+    ## `RCC subtype`Non clear cell           0.02027 *  
+    ## `Sarcomatoid subtype`Non sarcomatoid  0.87189    
+    ## IMDCPoor                              0.00224 ** 
+    ## `ECOG Performance Status`PS≥1         0.95868    
+    ## `Objective response`PR                0.00022 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ##                                      exp(coef) exp(-coef) lower .95 upper .95
+    ## SexFemale                               1.7049    0.58655    0.9761     2.978
+    ## Age                                     1.0110    0.98907    0.9834     1.039
+    ## `CPI Regimen`Anti-PD1                   1.7698    0.56504    0.7457     4.201
+    ## `Treatment line`Other                   0.8680    1.15203    0.3643     2.068
+    ## `RCC subtype`Non clear cell             2.2159    0.45129    1.1318     4.338
+    ## `Sarcomatoid subtype`Non sarcomatoid    0.9507    1.05181    0.5145     1.757
+    ## IMDCPoor                                2.2264    0.44915    1.3325     3.720
+    ## `ECOG Performance Status`PS≥1           1.0142    0.98600    0.5950     1.729
+    ## `Objective response`PR                 42.2315    0.02368    5.7996   307.521
+    ## 
+    ## Concordance= 0.776  (se = 0.028 )
+    ## Likelihood ratio test= 74.82  on 9 df,   p=2e-12
+    ## Wald test            = 37.97  on 9 df,   p=2e-05
+    ## Score (logrank) test = 61.91  on 9 df,   p=6e-10
+
+``` r
+summary(cox_model_sign)
+```
+
+    ## Call:
+    ## coxph(formula = fmla_sign, data = dataDF_complete)
+    ## 
+    ##   n= 237, number of events= 65 
+    ## 
+    ##                                   coef exp(coef) se(coef)      z Pr(>|z|)    
+    ## SexFemale                      0.53488   1.70724  0.28457  1.880 0.060165 .  
+    ## Age                            0.01073   1.01079  0.01405  0.764 0.444889    
+    ## `CPI Regimen`Anti-PD1          0.56485   1.75918  0.43815  1.289 0.197341    
+    ## `Treatment line`Other         -0.15643   0.85519  0.43189 -0.362 0.717200    
+    ## `RCC subtype`Non clear cell    0.79647   2.21769  0.34281  2.323 0.020160 *  
+    ## IMDCPoor                       0.80337   2.23306  0.26126  3.075 0.002105 ** 
+    ## `ECOG Performance Status`PS≥1  0.01571   1.01583  0.27191  0.058 0.953932    
+    ## `Objective response`PR         3.73764  41.99880  1.01250  3.691 0.000223 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ##                               exp(coef) exp(-coef) lower .95 upper .95
+    ## SexFemale                        1.7072    0.58574    0.9774     2.982
+    ## Age                              1.0108    0.98933    0.9833     1.039
+    ## `CPI Regimen`Anti-PD1            1.7592    0.56845    0.7453     4.152
+    ## `Treatment line`Other            0.8552    1.16933    0.3668     1.994
+    ## `RCC subtype`Non clear cell      2.2177    0.45092    1.1327     4.342
+    ## IMDCPoor                         2.2331    0.44782    1.3382     3.726
+    ## `ECOG Performance Status`PS≥1    1.0158    0.98441    0.5962     1.731
+    ## `Objective response`PR          41.9988    0.02381    5.7729   305.549
+    ## 
+    ## Concordance= 0.777  (se = 0.028 )
+    ## Likelihood ratio test= 74.8  on 8 df,   p=5e-13
+    ## Wald test            = 37.95  on 8 df,   p=8e-06
+    ## Score (logrank) test = 61.9  on 8 df,   p=2e-10
+
+``` r
+forest_model_all <- forest_model(cox_model_all,  # Set x-axis limits
+                             exponentiate = TRUE)  # Display hazard ratios on log scale)
+forest_model_sign <- forest_model(cox_model_sign,  # Set x-axis limits
+                             exponentiate = TRUE)  # Display hazard ratios on log scale)
+
+# Display the plot
+print(forest_model_all)
+```
+
+![](Survival_analysis_renal_files/figure-gfm/Multivariate%20Survival%20Analysis%20-%20only%20complete%20cases%20RSS-1.png)<!-- -->
+
+``` r
+print(forest_model_sign)
+```
+
+![](Survival_analysis_renal_files/figure-gfm/Multivariate%20Survival%20Analysis%20-%20only%20complete%20cases%20RSS-2.png)<!-- -->
+
+# Combined Univariable vs Multivariable Forest Plots - RSS
+
+``` r
+# Prepare empty list to collect rows
+rows <- vector("list", 0)
+
+# Summaries of the multivariable model
+s_multi    <- summary(cox_model_sign)
+coef_multi <- s_multi$coefficients      # matrix with exp(coef) and p
+ci_multi   <- s_multi$conf.int          # matrix with lower/upper .95
+
+# Loop over each univariable result
+for (i in seq_along(multiple_uni)) {
+  u    <- multiple_uni[[i]]
+  cov  <- u$overall$covariates           # the covariate name
+  fit  <- u$coxph
+  s_u  <- summary(fit)
+  coef_u <- s_u$coefficients             # matrix with exp(coef) etc.
+  ci_u   <- s_u$conf.int
+  if(u$summaryAsFrame$factor.value[1] == "<continuous>"){
+    reference <- "NA"
+    levs <- "Fitted as continuous"
+  } else {
+    reference <- levels(as.factor(u$data[,ncol(u$data)]))[1]
+    levs <- setdiff(unique(u$data[,ncol(u$data)]), reference)
+  }
+  # for each row (level) in the univariable fit:
+  for (j in seq_len(nrow(coef_u))) {
+    HRu  <- coef_u[j, "exp(coef)"]
+    LUu  <- ci_u[j,   "lower .95"]
+    UCu  <- ci_u[j,   "upper .95"]
+    pu   <- coef_u[j, "Pr(>|z|)"]
+    
+    if (cov %in% multiv_feats_sign) {
+      HRm <- coef_multi[grep(cov, rownames(coef_multi))[j], "exp(coef)"]
+      LUm <- ci_multi[ grep(cov, rownames(coef_multi))[j], "lower .95"]
+      UCm <- ci_multi[ grep(cov, rownames(coef_multi))[j], "upper .95"]
+      pm  <- coef_multi[grep(cov, rownames(coef_multi))[j], "Pr(>|z|)"]
+    } else {
+      HRm <- NA; LUm <- NA; UCm <- NA; pm <- NA
+    }
+    
+    rows[[length(rows) + 1]] <- data.frame(
+      Covariate       = cov,
+      Level           = levs[j],
+      Reference       = reference,
+      HR_uni          = HRu,
+      CI_lo_uni       = LUu,
+      CI_hi_uni       = UCu,
+      p_uni           = pu,
+      HR_multi        = HRm,
+      CI_lo_multi     = LUm,
+      CI_hi_multi     = UCm,
+      p_multi         = pm,
+      stringsAsFactors = FALSE
+    )
+  }
+}
+
+# Bind into one data.frame
+results_df <- do.call(rbind, rows)
+
+# Format up to three digits
+results_df <- results_df %>%
+  mutate(across(starts_with("HR_") | starts_with("CI_") | matches("^p_"),
+                ~ signif(.x, 3)))
+
+results_df$CI_lo_uni <- paste0(results_df$CI_lo_uni, "-", results_df$CI_hi_uni)
+results_df$CI_hi_uni <- NULL
+results_df$CI_lo_multi <- paste0(results_df$CI_lo_multi, "-", results_df$CI_hi_multi)
+results_df$CI_hi_multi <- NULL
+colnames(results_df) <- c("Covariate", "Level", "Reference" , "Univariable HR", "Univariable CI", "Univariable P-value", "Multivariable HR", "Multivariable CI", "Multivariable P-value")
+
+last_col <- ncol(results_df)
+results_df <- results_df %>%
+  mutate(across(
+    .cols = -last_col,
+    .fns  = ~ ifelse(is.na(.) | grepl("NA", ., fixed = TRUE), "", .)
+  )) %>%
+  mutate(across(
+    .cols = last_col,
+    .fns  = ~ ifelse(is.na(.), "Excluded from multivariable analysis", as.character(.))
+  ))
+
+results_df <- results_df %>%
+  group_by(Covariate) %>%
+  mutate(Covariate = ifelse(row_number() == 1, Covariate, "")) %>%
+  ungroup()
+
+n_cols <- ncol(results_df)
+
+# align: left for first two, center for the rest
+aligns <- c("l", "l", rep("c", n_cols - 2))
+
+results_df %>%
+  kable(
+    format = "html",
+    caption = "Univariable vs Multivariable Cox Results - OS",
+    align   = aligns,
+    escape  = FALSE
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width        = FALSE
+  ) %>%
+  # make header row bold and centered
+  row_spec(
+    0,
+    bold  = TRUE,
+    align = "center"
+  ) %>%
+  # add vertical lines right of col 3 and col 6
+  column_spec(3, border_right = TRUE) %>%
+  column_spec(6, border_right = TRUE)
+```
+
+<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
+
+<caption>
+
+Univariable vs Multivariable Cox Results - OS
+</caption>
+
+<thead>
+
+<tr>
+
+<th style="text-align:left;font-weight: bold;text-align: center;">
+
+Covariate
+</th>
+
+<th style="text-align:left;font-weight: bold;text-align: center;">
+
+Level
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Reference
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Univariable HR
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Univariable CI
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Univariable P-value
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Multivariable HR
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Multivariable CI
+</th>
+
+<th style="text-align:center;font-weight: bold;text-align: center;">
+
+Multivariable P-value
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+
+<td style="text-align:left;">
+
+Sex
+</td>
+
+<td style="text-align:left;">
+
+Female
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+Male
+</td>
+
+<td style="text-align:center;">
+
+1.85
+</td>
+
+<td style="text-align:center;">
+
+1.14-3.03
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+0.013500
+</td>
+
+<td style="text-align:center;">
+
+1.71
+</td>
+
+<td style="text-align:center;">
+
+0.977-2.98
+</td>
+
+<td style="text-align:center;">
+
+0.0602
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Age
+</td>
+
+<td style="text-align:left;">
+
+Fitted as continuous
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+</td>
+
+<td style="text-align:center;">
+
+1.02
+</td>
+
+<td style="text-align:center;">
+
+0.993-1.04
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+0.164000
+</td>
+
+<td style="text-align:center;">
+
+1.01
+</td>
+
+<td style="text-align:center;">
+
+0.983-1.04
+</td>
+
+<td style="text-align:center;">
+
+0.445
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+CPI Regimen
+</td>
+
+<td style="text-align:left;">
+
+Anti-PD1
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+Anti-PD1+Anti-CTLA4
+</td>
+
+<td style="text-align:center;">
+
+1.53
+</td>
+
+<td style="text-align:center;">
+
+0.925-2.53
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+0.097500
+</td>
+
+<td style="text-align:center;">
+
+1.76
+</td>
+
+<td style="text-align:center;">
+
+0.745-4.15
+</td>
+
+<td style="text-align:center;">
+
+0.197
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Treatment line
+</td>
+
+<td style="text-align:left;">
+
+Other
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+First
+</td>
+
+<td style="text-align:center;">
+
+1.47
+</td>
+
+<td style="text-align:center;">
+
+0.902-2.38
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+0.123000
+</td>
+
+<td style="text-align:center;">
+
+0.855
+</td>
+
+<td style="text-align:center;">
+
+0.367-1.99
+</td>
+
+<td style="text-align:center;">
+
+0.717
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+RCC subtype
+</td>
+
+<td style="text-align:left;">
+
+Non clear cell
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+Clear cell
+</td>
+
+<td style="text-align:center;">
+
+1.75
+</td>
+
+<td style="text-align:center;">
+
+0.959-3.19
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+0.068200
+</td>
+
+<td style="text-align:center;">
+
+2.22
+</td>
+
+<td style="text-align:center;">
+
+1.13-4.34
+</td>
+
+<td style="text-align:center;">
+
+0.0202
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Sarcomatoid subtype
+</td>
+
+<td style="text-align:left;">
+
+Non sarcomatoid
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+Sarcomatoid
+</td>
+
+<td style="text-align:center;">
+
+1.31
+</td>
+
+<td style="text-align:center;">
+
+0.775-2.21
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+0.314000
+</td>
+
+<td style="text-align:center;">
+
+</td>
+
+<td style="text-align:center;">
+
+</td>
+
+<td style="text-align:center;">
+
+Excluded from multivariable analysis
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+IMDC
+</td>
+
+<td style="text-align:left;">
+
+Poor
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+Good/Intermediate
+</td>
+
+<td style="text-align:center;">
+
+2.23
+</td>
+
+<td style="text-align:center;">
+
+1.4-3.56
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+0.000745
+</td>
+
+<td style="text-align:center;">
+
+2.23
+</td>
+
+<td style="text-align:center;">
+
+1.34-3.73
+</td>
+
+<td style="text-align:center;">
+
+0.00211
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+ECOG Performance Status
+</td>
+
+<td style="text-align:left;">
+
+PS≥1
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+PS=0
+</td>
+
+<td style="text-align:center;">
+
+1.83
+</td>
+
+<td style="text-align:center;">
+
+1.14-2.94
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+0.013000
+</td>
+
+<td style="text-align:center;">
+
+1.02
+</td>
+
+<td style="text-align:center;">
+
+0.596-1.73
+</td>
+
+<td style="text-align:center;">
+
+0.954
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Objective response
+</td>
+
+<td style="text-align:left;">
+
+PR
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+CR
+</td>
+
+<td style="text-align:center;">
+
+40.60
+</td>
+
+<td style="text-align:center;">
+
+5.64-293
+</td>
+
+<td style="text-align:center;border-right:1px solid;">
+
+0.000235
+</td>
+
+<td style="text-align:center;">
+
+42
+</td>
+
+<td style="text-align:center;">
+
+5.77-306
+</td>
+
+<td style="text-align:center;">
+
+0.000223
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
 # Five-Year Survival Estimates by Response
 
 ``` r
@@ -2274,6 +3153,14 @@ p_os <- ggsurvfit(fit_OS, size = 1.5) +
     hjust = 0
     )
 ```
+
+    ## Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+    ## ℹ Please use `linewidth` instead.
+    ## ℹ The deprecated feature was likely used in the ggsurvfit package.
+    ##   Please report the issue at <https://github.com/pharmaverse/ggsurvfit/issues>.
+    ## This warning is displayed once every 8 hours.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+    ## generated.
 
     ## Scale for x is already present.
     ## Adding another scale for x, which will replace the existing scale.

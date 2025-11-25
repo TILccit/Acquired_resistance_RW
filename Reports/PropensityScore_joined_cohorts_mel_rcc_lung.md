@@ -1,7 +1,7 @@
 Propensity Scores Calculation and Survival Analysis
 ================
 Mario Presti
-First created on May 2025 Updated on 27 August 2025
+First created on May 2025 Updated on 25 November 2025
 
 - [Introduction](#introduction)
 - [Loading Libraries](#loading-libraries)
@@ -34,6 +34,7 @@ First created on May 2025 Updated on 27 August 2025
   - [Administrative censoring rates per
     tumour](#administrative-censoring-rates-per-tumour)
 - [Differential distribution of CRs](#differential-distribution-of-crs)
+- [Post-hoc power analysis](#post-hoc-power-analysis)
 
 # Introduction
 
@@ -406,6 +407,7 @@ Baseline_Characteristics_table_Partial_patients
     ## NSCLC subtype:                                                                
     ##     Nonsquamous                   NA               NA          546 (81.9%)    
     ##     Squamous                      NA               NA          121 (18.1%)    
+    ## Dead_RCC                       . [.;.]      0.00 [0.00;1.00]     . [.;.]      
     ## RCC subtype:                                                                  
     ##     Clear cell                    NA          225 (86.2%)           NA        
     ##     Non clear cell                NA           36 (13.8%)           NA        
@@ -1022,7 +1024,7 @@ descr_features <- paste0("`", setdiff(features, c("CPI Regimen", "DOR", "Brain m
 descr_formula <- as.formula(paste0("DOR ~", descr_features))
 comparisons <- list(c("Melanoma", "RCC"), c("Melanoma", "NSCLC"), c("RCC", "NSCLC"))
 
-OS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "OS", truncate_month = 60, caliper=0.2)
+OS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons,matching_formula =  matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "OS", truncate_month = 60, caliper=0.2)
 PFS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "PFS", truncate_month = 60, caliper = 0.2)
 
 print(paste0("PS matching with the following formula:", paste0("Tumor ~", matching_features)))
@@ -1059,6 +1061,86 @@ PFS_psm_all$combined_surv_plot
 ```
 
 ![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20all-5.png)<!-- -->
+
+``` r
+ratio = 2
+OS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "OS", truncate_month = 60, caliper=0.2,ratio = ratio)
+PFS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "PFS", truncate_month = 60, caliper = 0.2,ratio = ratio)
+
+print(paste0("PS matching with the following formula:", paste0("Tumor ~", matching_features), "and ratio: ", ratio))
+```
+
+    ## [1] "PS matching with the following formula:Tumor ~`Sex` + `Age` + `Treatment line` + `ECOG Performance Status` + `DOR`and ratio: 2"
+
+``` r
+OS_psm_all$combined_surv_plot
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-1.png)<!-- -->
+
+``` r
+OS_psm_all$love_plots
+```
+
+    ## $`Melanoma vs RCC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-2.png)<!-- -->
+
+    ## 
+    ## $`Melanoma vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-3.png)<!-- -->
+
+    ## 
+    ## $`RCC vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-4.png)<!-- -->
+
+``` r
+PFS_psm_all$combined_surv_plot
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-5.png)<!-- -->
+
+``` r
+ratio = 3
+OS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "OS", truncate_month = 60, caliper=0.2,ratio = ratio)
+PFS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "PFS", truncate_month = 60, caliper = 0.2,ratio = ratio)
+
+print(paste0("PS matching with the following formula:", paste0("Tumor ~", matching_features), "and ratio: ", ratio))
+```
+
+    ## [1] "PS matching with the following formula:Tumor ~`Sex` + `Age` + `Treatment line` + `ECOG Performance Status` + `DOR`and ratio: 3"
+
+``` r
+OS_psm_all$combined_surv_plot
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-6.png)<!-- -->
+
+``` r
+OS_psm_all$love_plots
+```
+
+    ## $`Melanoma vs RCC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-7.png)<!-- -->
+
+    ## 
+    ## $`Melanoma vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-8.png)<!-- -->
+
+    ## 
+    ## $`RCC vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-9.png)<!-- -->
+
+``` r
+PFS_psm_all$combined_surv_plot
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-10.png)<!-- -->
 
 ## PSM only on CR
 
@@ -1480,3 +1562,392 @@ for (d in responses) {
 
     ## Median time-to-progression among PR was 10.87 months (MM), 13.70 months (RCC) and 15.18 months (NSCLC).
     ## Median time-to-progression among CR was 23.95 months (MM), 31.27 months (RCC) and 31.95 months (NSCLC).
+
+# Post-hoc power analysis
+
+``` r
+library(survival)
+library(stats)
+
+# Schoenfeld-based functions
+schoenfeld_power <- function(D, p = 0.5, HR, alpha = 0.05) {
+  if (HR <= 0) stop("HR must be > 0")
+  z_alpha <- qnorm(1 - alpha / 2)
+  delta <- sqrt(D * p * (1 - p)) * abs(log(HR))
+  power <- pnorm(delta - z_alpha)
+  return(power)
+}
+
+schoenfeld_required_events <- function(target_power = 0.8, p = 0.5, HR, alpha = 0.05) {
+  if (HR <= 0) stop("HR must be > 0")
+  z_alpha <- qnorm(1 - alpha / 2)
+  z_beta  <- qnorm(target_power)                # 1 - beta quantile
+  D <- ((z_alpha + z_beta)^2) / (p * (1 - p) * (log(HR))^2)
+  return(ceiling(D))
+}
+
+# Helper to extract info from a matched_df (one comparison)
+posthoc_power_from_matched <- function(matched_df, group_var = "Tumor",
+                                       timevar = "PFS_months", statusvar = "Progressed",
+                                       alpha = 0.05) {
+  # make sure group is a factor and compute allocation p
+  matched_df[[group_var]] <- droplevels(as.factor(matched_df[[group_var]]))
+  tbl <- table(matched_df[[group_var]])
+  # pick first level as "reference" for p
+  levels_group <- levels(matched_df[[group_var]])
+  if (length(levels_group) != 2) stop("Need exactly 2 groups for pairwise power.")
+  n1 <- as.integer(tbl[1]); n2 <- as.integer(tbl[2])
+  p <- n1 / (n1 + n2)
+
+  # events
+  D <- sum(matched_df[[statusvar]] == 1, na.rm = TRUE)
+
+  # fit Cox (naive)
+  f <- as.formula(paste0("Surv(", timevar, ", ", statusvar, ") ~ ", group_var))
+  fit <- coxph(f, data = matched_df)
+  s <- summary(fit)
+  logHR <- s$coefficients[1, "coef"]
+  se_logHR <- s$coefficients[1, "se(coef)"]
+  HR <- exp(logHR)
+
+  # observed power via Schoenfeld:
+  power_obs <- schoenfeld_power(D = D, p = p, HR = HR, alpha = alpha)
+  # required events for 80% and 90%:
+  req80 <- schoenfeld_required_events(0.8, p = p, HR = HR, alpha = alpha)
+  req90 <- schoenfeld_required_events(0.9, p = p, HR = HR, alpha = alpha)
+
+  list(
+    n1 = n1, n2 = n2, D = D, p = p,
+    HR = HR, logHR = logHR, se_logHR = se_logHR,
+    observed_power = power_obs,
+    required_events_80 = req80,
+    required_events_90 = req90,
+    cox_summary = s
+  )
+}
+```
+
+``` r
+design_info_twoarm <- function(df,
+                               group_var  = "Tumor",
+                               timevar    = "censor_time_PFS",
+                               statusvar  = "censor_status_PFS") {
+  vars_needed <- c(group_var, timevar, statusvar)
+  df <- df[complete.cases(df[, vars_needed]), ]
+
+  g <- droplevels(as.factor(df[[group_var]]))
+  if (nlevels(g) != 2L)
+    stop("Need exactly 2 levels in ", group_var, " (got: ",
+         paste(levels(g), collapse = ", "), ")")
+
+  tab <- table(g)
+  n1  <- as.integer(tab[1])
+  n2  <- as.integer(tab[2])
+  p   <- n1 / (n1 + n2)
+
+  D <- sum(df[[statusvar]] == 1L, na.rm = TRUE)
+
+  list(n1 = n1, n2 = n2, p = p, D = D)
+}
+
+power_for_pairs_target_HR <- function(df,
+                                      comparisons,
+                                      response_level,
+                                      HR_target,
+                                      timevar   = "censor_time_PFS",
+                                      statusvar = "censor_status_PFS",
+                                      alpha     = 0.05) {
+
+  out_list <- list()
+
+  # Restrict to chosen response level
+  if(!is.na(response_level)){
+    df <- subset(df, DOR == response_level)
+  } else {
+    df=df
+  }
+
+  for (pair in comparisons) {
+    pair <- as.character(pair)
+
+    sub_df <- df[df$Tumor %in% pair, , drop = FALSE]
+    # fix ordering (important for n1 / n2 labelling, but not for power)
+    sub_df$Tumor <- droplevels(factor(sub_df$Tumor, levels = pair))
+
+    info <- design_info_twoarm(sub_df,
+                               group_var = "Tumor",
+                               timevar   = timevar,
+                               statusvar = statusvar)
+
+    power <- schoenfeld_power(D = info$D,
+                              p = info$p,
+                              HR = HR_target,
+                              alpha = alpha)
+
+    out_list[[paste(pair, collapse = " vs ")]] <- data.frame(
+      comparison = paste(pair, collapse = " vs "),
+      response   = response_level,
+      HR_target  = HR_target,
+      n1         = info$n1,
+      n2         = info$n2,
+      events_D   = info$D,
+      power      = power,
+      stringsAsFactors = FALSE
+    )
+  }
+
+  do.call(rbind, out_list)
+}
+
+power_pairs_CR_ls <- list()
+for (i in seq_along(comparisons)){
+  data <- subset(dataDF, Tumor %in% unlist(comparisons[i]))
+  fit_CR <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1,
+                      data = data)
+  m_ref_CR   <- as.numeric(summary(fit_CR)$table["median"])
+  delta_CR   <- 12
+  HR_target_CR <- m_ref_CR / (m_ref_CR + delta_CR)
+
+  power_pairs_CR <- power_for_pairs_target_HR(
+  df           = data,
+  comparisons  = comparisons[i],
+  response_level = "CR",
+  HR_target    = HR_target_CR,
+  timevar      = "censor_time_PFS",
+  statusvar    = "censor_status_PFS",
+  alpha        = 0.05)
+  
+  power_pairs_CR_ls[[i]] <- power_pairs_CR 
+}
+
+power_CR <- do.call(rbind, power_pairs_CR_ls)
+power_CR$group <- "Unmatched CR"
+
+power_pairs_PR_ls <- list()
+for (i in seq_along(comparisons)){
+  data <- subset(dataDF, Tumor %in% unlist(comparisons[i]))
+  fit_PR <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1,
+                      data = data)
+  m_ref_PR   <- as.numeric(summary(fit_PR)$table["median"])
+  delta_PR   <- 12
+  HR_target_PR <- m_ref_PR / (m_ref_PR + delta_PR)
+
+  power_pairs_PR <- power_for_pairs_target_HR(
+  df           = data,
+  comparisons  = comparisons[i],
+  response_level = "PR",
+  HR_target    = HR_target_PR,
+  timevar      = "censor_time_PFS",
+  statusvar    = "censor_status_PFS",
+  alpha        = 0.05)
+  
+  power_pairs_PR_ls[[i]] <- power_pairs_PR 
+}
+
+power_PR <- do.call(rbind, power_pairs_PR_ls)
+power_PR$group <- "Unmatched PR"
+
+power_pairs_psm_ls <- list()
+for (i in seq_along(comparisons)){
+  matched_data <- PFS_psm_all$matched_dfs[[i]]
+  fit_psm <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1,
+                      data = matched_data)
+  m_ref_psm   <- as.numeric(summary(fit_psm)$table["median"])
+  delta_psm   <- 12
+  HR_target_psm <- m_ref_psm / (m_ref_psm + delta_psm)
+
+  power_pairs_psm <- power_for_pairs_target_HR(
+  df           = matched_data,
+  comparisons  = comparisons[i],
+  response_level = NA,
+  HR_target    = HR_target_psm,
+  timevar      = "censor_time_PFS",
+  statusvar    = "censor_status_PFS",
+  alpha        = 0.05)
+  
+  power_pairs_psm_ls[[i]] <- power_pairs_psm 
+}
+
+power_psm <- do.call(rbind, power_pairs_psm_ls)
+power_psm$group <- "PSM"
+
+power_table_final <- rbind(power_CR,power_PR, power_psm)
+power_table_final
+```
+
+    ##                           comparison response HR_target  n1  n2 events_D
+    ## Melanoma vs RCC      Melanoma vs RCC       CR 0.7771705 576  79      147
+    ## Melanoma vs NSCLC  Melanoma vs NSCLC       CR 0.7201520 576  73      150
+    ## RCC vs NSCLC            RCC vs NSCLC       CR 0.6736473  79  73       45
+    ## Melanoma vs RCC1     Melanoma vs RCC       PR 0.7771705 620 178      533
+    ## Melanoma vs NSCLC1 Melanoma vs NSCLC       PR 0.7201520 620 591      862
+    ## RCC vs NSCLC1           RCC vs NSCLC       PR 0.6736473 178 591      591
+    ## Melanoma vs RCC2     Melanoma vs RCC     <NA> 0.7222797 256 256      276
+    ## Melanoma vs NSCLC2 Melanoma vs NSCLC     <NA> 0.6661915 472 472      606
+    ## RCC vs NSCLC2           RCC vs NSCLC     <NA> 0.6813344 219 219      303
+    ##                        power        group
+    ## Melanoma vs RCC    0.1673872 Unmatched CR
+    ## Melanoma vs NSCLC  0.2452294 Unmatched CR
+    ## RCC vs NSCLC       0.2624001 Unmatched CR
+    ## Melanoma vs RCC1   0.6782874 Unmatched PR
+    ## Melanoma vs NSCLC1 0.9978682 Unmatched PR
+    ## RCC vs NSCLC1      0.9817206 Unmatched PR
+    ## Melanoma vs RCC2   0.7711189          PSM
+    ## Melanoma vs NSCLC2 0.9988151          PSM
+    ## RCC vs NSCLC2      0.9161399          PSM
+
+``` r
+# Choose the deltas you want to explore (months)
+deltas <- seq(3,42, by=3)
+
+power_all_delta_ls <- list()
+
+for (delta in deltas) {
+
+  ## ---------- CR: unmatched ----------
+  power_pairs_CR_ls <- list()
+  for (i in seq_along(comparisons)) {
+    data <- subset(dataDF, Tumor %in% unlist(comparisons[i]))
+    
+    fit_CR <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1,
+                      data = data)
+    m_ref_CR     <- as.numeric(summary(fit_CR)$table["median"])
+    delta_CR     <- delta
+    HR_target_CR <- m_ref_CR / (m_ref_CR + delta_CR)
+
+    power_pairs_CR <- power_for_pairs_target_HR(
+      df            = data,
+      comparisons   = comparisons[i],
+      response_level = "CR",
+      HR_target     = HR_target_CR,
+      timevar       = "censor_time_PFS",
+      statusvar     = "censor_status_PFS",
+      alpha         = 0.05
+    )
+    
+    power_pairs_CR_ls[[i]] <- power_pairs_CR 
+  }
+  power_CR <- do.call(rbind, power_pairs_CR_ls)
+  power_CR$group <- "Unmatched CR"
+  power_CR$delta <- delta
+  
+  ## ---------- PR: unmatched ----------
+  power_pairs_PR_ls <- list()
+  for (i in seq_along(comparisons)) {
+    data <- subset(dataDF, Tumor %in% unlist(comparisons[i]))
+    
+    fit_PR <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1,
+                      data = data)
+    m_ref_PR     <- as.numeric(summary(fit_PR)$table["median"])
+    delta_PR     <- delta
+    HR_target_PR <- m_ref_PR / (m_ref_PR + delta_PR)
+
+    power_pairs_PR <- power_for_pairs_target_HR(
+      df            = data,
+      comparisons   = comparisons[i],
+      response_level = "PR",
+      HR_target     = HR_target_PR,
+      timevar       = "censor_time_PFS",
+      statusvar     = "censor_status_PFS",
+      alpha         = 0.05
+    )
+    
+    power_pairs_PR_ls[[i]] <- power_pairs_PR 
+  }
+  power_PR <- do.call(rbind, power_pairs_PR_ls)
+  power_PR$group <- "Unmatched PR"
+  power_PR$delta <- delta
+  
+  ## ---------- PSM: all patients (no DOR restriction) ----------
+  power_pairs_psm_ls <- list()
+  for (i in seq_along(comparisons)) {
+    matched_data <- PFS_psm_all$matched_dfs[[i]]
+    
+    fit_psm <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1,
+                       data = matched_data)
+    m_ref_psm     <- as.numeric(summary(fit_psm)$table["median"])
+    delta_psm     <- delta
+    HR_target_psm <- m_ref_psm / (m_ref_psm + delta_psm)
+
+    power_pairs_psm <- power_for_pairs_target_HR(
+      df            = matched_data,
+      comparisons   = comparisons[i],
+      response_level = NA,   # as in your original code
+      HR_target     = HR_target_psm,
+      timevar       = "censor_time_PFS",
+      statusvar     = "censor_status_PFS",
+      alpha         = 0.05
+    )
+    
+    power_pairs_psm_ls[[i]] <- power_pairs_psm 
+  }
+  power_psm <- do.call(rbind, power_pairs_psm_ls)
+  power_psm$group <- "PSM"
+  power_psm$delta <- delta
+  
+  ## ---------- bind for this delta ----------
+  power_all_delta_ls[[as.character(delta)]] <- 
+    rbind(power_CR, power_PR, power_psm)
+}
+
+# Final long table with all deltas
+power_table_heat <- do.call(rbind, power_all_delta_ls)
+
+# Make sure things are nicely formatted for plotting
+power_table_heat <- power_table_heat %>%
+  mutate(
+    delta      = as.factor(delta),
+    group      = factor(group, levels = c("Unmatched PR", "Unmatched CR", "PSM")),
+    comparison = as.factor(comparison)
+  )
+
+head(power_table_heat)
+```
+
+    ##                             comparison response HR_target  n1  n2 events_D
+    ## 3.Melanoma vs RCC      Melanoma vs RCC       CR 0.9331146 576  79      147
+    ## 3.Melanoma vs NSCLC  Melanoma vs NSCLC       CR 0.9114533 576  73      150
+    ## 3.RCC vs NSCLC            RCC vs NSCLC       CR 0.8919699  79  73       45
+    ## 3.Melanoma vs RCC1     Melanoma vs RCC       PR 0.9331146 620 178      533
+    ## 3.Melanoma vs NSCLC1 Melanoma vs NSCLC       PR 0.9114533 620 591      862
+    ## 3.RCC vs NSCLC1           RCC vs NSCLC       PR 0.8919699 178 591      591
+    ##                           power        group delta
+    ## 3.Melanoma vs RCC    0.04583882 Unmatched CR     3
+    ## 3.Melanoma vs NSCLC  0.05466764 Unmatched CR     3
+    ## 3.RCC vs NSCLC       0.05741937 Unmatched CR     3
+    ## 3.Melanoma vs RCC1   0.09772503 Unmatched PR     3
+    ## 3.Melanoma vs NSCLC1 0.27448423 Unmatched PR     3
+    ## 3.RCC vs NSCLC1      0.21541944 Unmatched PR     3
+
+``` r
+power_table_heat_plot <- power_table_heat %>%
+  mutate(
+    power_trunc = pmax(power, 0.7) 
+  )
+
+ggplot(power_table_heat_plot,
+       aes(x = delta, y = comparison, fill = power_trunc)) +
+  geom_tile(color = "white", linewidth = 0.5) +
+  scale_fill_viridis_c(
+    name   = "Power",
+    breaks = c(0.7, 0.8, 0.9, 1.0),
+    labels = c("<0.7", "0.8", "0.9", "1.0"),
+    option = "F"
+  ) +
+  facet_wrap(~ group, ncol = 1, scales = "free_y") +
+  labs(
+    title = "Post-hoc power to detect Δ median PFS",
+    x     = "Δ PFS (months)",
+    y     = "Tumour comparison"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid      = element_blank(),
+    strip.text      = element_text(size = 14, face = "bold"),
+    axis.text.x     = element_text(size = 12),
+    axis.text.y     = element_text(size = 12),
+    legend.position = "right"
+  )
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/power%20heatmap-1.png)<!-- -->
