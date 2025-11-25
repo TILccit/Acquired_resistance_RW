@@ -1797,6 +1797,19 @@ power_table_final
     ## RCC vs NSCLC2      0.9161399          PSM
 
 ``` r
+# kable(
+#   power_table_final,
+#   format    = "html",
+#   digits    = 2,              # round numeric columns to 2 digits
+#   caption   = "Power Calculations",row.names = F
+# ) %>%
+#   kable_styling(
+#     bootstrap_options = c("striped", "hover", "condensed"), 
+#     full_width        = FALSE
+#   )
+```
+
+``` r
 # Choose the deltas you want to explore (months)
 deltas <- seq(3,42, by=3)
 
@@ -1901,25 +1914,6 @@ power_table_heat <- power_table_heat %>%
     comparison = as.factor(comparison)
   )
 
-head(power_table_heat)
-```
-
-    ##                             comparison response HR_target  n1  n2 events_D
-    ## 3.Melanoma vs RCC      Melanoma vs RCC       CR 0.9331146 576  79      147
-    ## 3.Melanoma vs NSCLC  Melanoma vs NSCLC       CR 0.9114533 576  73      150
-    ## 3.RCC vs NSCLC            RCC vs NSCLC       CR 0.8919699  79  73       45
-    ## 3.Melanoma vs RCC1     Melanoma vs RCC       PR 0.9331146 620 178      533
-    ## 3.Melanoma vs NSCLC1 Melanoma vs NSCLC       PR 0.9114533 620 591      862
-    ## 3.RCC vs NSCLC1           RCC vs NSCLC       PR 0.8919699 178 591      591
-    ##                           power        group delta
-    ## 3.Melanoma vs RCC    0.04583882 Unmatched CR     3
-    ## 3.Melanoma vs NSCLC  0.05466764 Unmatched CR     3
-    ## 3.RCC vs NSCLC       0.05741937 Unmatched CR     3
-    ## 3.Melanoma vs RCC1   0.09772503 Unmatched PR     3
-    ## 3.Melanoma vs NSCLC1 0.27448423 Unmatched PR     3
-    ## 3.RCC vs NSCLC1      0.21541944 Unmatched PR     3
-
-``` r
 power_table_heat_plot <- power_table_heat %>%
   mutate(
     power_trunc = pmax(power, 0.7) 
@@ -1932,7 +1926,7 @@ ggplot(power_table_heat_plot,
     name   = "Power",
     breaks = c(0.7, 0.8, 0.9, 1.0),
     labels = c("<0.7", "0.8", "0.9", "1.0"),
-    option = "F"
+    option = "D"
   ) +
   facet_wrap(~ group, ncol = 1, scales = "free_y") +
   labs(

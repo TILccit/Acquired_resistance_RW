@@ -1329,6 +1329,17 @@ power_psm$group <- "PSM"
 
 power_table_final <- rbind(power_CR,power_PR, power_psm)
 power_table_final
+# kable(
+#   power_table_final,
+#   format    = "html",
+#   digits    = 2,              # round numeric columns to 2 digits
+#   caption   = "Power Calculations",row.names = F
+# ) %>%
+#   kable_styling(
+#     bootstrap_options = c("striped", "hover", "condensed"), 
+#     full_width        = FALSE
+#   )
+
 ```
 
 ```{r power heatmap}
@@ -1436,8 +1447,6 @@ power_table_heat <- power_table_heat %>%
     comparison = as.factor(comparison)
   )
 
-head(power_table_heat)
-
 power_table_heat_plot <- power_table_heat %>%
   mutate(
     power_trunc = pmax(power, 0.7) 
@@ -1450,7 +1459,7 @@ ggplot(power_table_heat_plot,
     name   = "Power",
     breaks = c(0.7, 0.8, 0.9, 1.0),
     labels = c("<0.7", "0.8", "0.9", "1.0"),
-    option = "F"
+    option = "D"
   ) +
   facet_wrap(~ group, ncol = 1, scales = "free_y") +
   labs(
