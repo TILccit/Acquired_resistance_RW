@@ -1,7 +1,7 @@
 Survival analysis melanoma
 ================
 Mario Presti
-First created on Feb 2025. Updated on 06 August 2025
+First created on Feb 2025. Updated on 28 November 2025
 
 - [Introduction](#introduction)
 - [Loading Libraries](#loading-libraries)
@@ -14,9 +14,9 @@ First created on Feb 2025. Updated on 06 August 2025
   PFS](#combined-univariable-vs-multivariable-forest-plots---pfs)
 - [Melanoma specific survival](#melanoma-specific-survival)
 - [Combined Univariable vs Multivariable Forest Plots -
-  MSS](#combined-univariable-vs-multivariable-forest-plots---mss)
+  DSS](#combined-univariable-vs-multivariable-forest-plots---dss)
   - [Numeric table with 5-year OS, PFS,
-    MSS](#numeric-table-with-5-year-os-pfs-mss)
+    DSS](#numeric-table-with-5-year-os-pfs-dss)
 - [Five-Year Survival Estimates by
   Response](#five-year-survival-estimates-by-response)
   - [18 Month landmark analysis](#18-month-landmark-analysis)
@@ -304,7 +304,7 @@ dataDF$censor_status_OS <- ifelse(dataDF$OS_days/30 > 60, 0, dataDF$Dead)
 dataDF$censor_time_PFS   <- pmin(dataDF$PFS_days/30, 60)
 dataDF$censor_status_PFS <- ifelse(dataDF$PFS_days/30 > 60, 0, dataDF$Progressed)
 #Administrative censoring at 60 months
-dataDF$censor_status_MSS <- ifelse(dataDF$OS_days/30 > 60, 0, dataDF$Dead_Mel)
+dataDF$censor_status_DSS <- ifelse(dataDF$OS_days/30 > 60, 0, dataDF$Dead_Mel)
 ```
 
 ``` r
@@ -424,6 +424,8 @@ forest_plot(multiple_uni,
     ## Warning: `switch_type()` is soft-deprecated as of rlang 0.4.0.
     ## Please use `switch(typeof())` or `switch(my_typeof())` instead.
     ## This warning is displayed once every 8 hours.
+
+    ## `height` was translated to `width`.
 
 ![](Survival_analysis_melanoma_files/figure-gfm/Multiple%20Univariate%20analysis%20-%20Including%20missing%20data%20-%20OS-1.png)<!-- -->
 
@@ -1493,6 +1495,8 @@ forest_plot(multiple_uni,
             )
 ```
 
+    ## `height` was translated to `width`.
+
 ![](Survival_analysis_melanoma_files/figure-gfm/Multiple%20Univariate%20analysis%20-%20Including%20missing%20data%20-%20PFS-1.png)<!-- -->
 
 ``` r
@@ -2558,8 +2562,8 @@ saveWorkbook(
 
 ``` r
 surv_time <- "censor_time_OS"
-surv_status <- "censor_status_MSS"
-surv_time_label <- "MSS"
+surv_status <- "censor_status_DSS"
+surv_time_label <- "DSS"
 # Find the best reference for each feature
 best_refs <- character(length(features))
 names(best_refs) <- features
@@ -2645,11 +2649,13 @@ forest_plot(multiple_uni,
             )
 ```
 
-![](Survival_analysis_melanoma_files/figure-gfm/Multiple%20Univariate%20analysis%20-%20Including%20missing%20data%20-%20MSS-1.png)<!-- -->
+    ## `height` was translated to `width`.
+
+![](Survival_analysis_melanoma_files/figure-gfm/Multiple%20Univariate%20analysis%20-%20Including%20missing%20data%20-%20DSS-1.png)<!-- -->
 
 ``` r
 surv_time <- "censor_time_OS"
-surv_status <- "censor_status_MSS"
+surv_status <- "censor_status_DSS"
 surv_time_label <- "OS"
 # # To remove both (NAs and empty):
 dataDF_complete <- dataDF %>%
@@ -2802,15 +2808,15 @@ forest_model_sign <- forest_model(cox_model_sign,  # Set x-axis limits
 print(forest_model_all)
 ```
 
-![](Survival_analysis_melanoma_files/figure-gfm/Multivariate%20Survival%20Analysis%20-%20only%20complete%20cases%20-%20MSS-1.png)<!-- -->
+![](Survival_analysis_melanoma_files/figure-gfm/Multivariate%20Survival%20Analysis%20-%20only%20complete%20cases%20-%20DSS-1.png)<!-- -->
 
 ``` r
 print(forest_model_sign)
 ```
 
-![](Survival_analysis_melanoma_files/figure-gfm/Multivariate%20Survival%20Analysis%20-%20only%20complete%20cases%20-%20MSS-2.png)<!-- -->
+![](Survival_analysis_melanoma_files/figure-gfm/Multivariate%20Survival%20Analysis%20-%20only%20complete%20cases%20-%20DSS-2.png)<!-- -->
 
-# Combined Univariable vs Multivariable Forest Plots - MSS
+# Combined Univariable vs Multivariable Forest Plots - DSS
 
 ``` r
 # Prepare empty list to collect rows
@@ -2902,7 +2908,7 @@ aligns <- c("l", "l", rep("c", n_cols - 2))
 results_df %>%
   kable(
     format = "html",
-    caption = "Univariable vs Multivariable Cox Results - MSS",
+    caption = "Univariable vs Multivariable Cox Results - DSS",
     align   = aligns,
     escape  = FALSE
   ) %>%
@@ -2925,7 +2931,7 @@ results_df %>%
 
 <caption>
 
-Univariable vs Multivariable Cox Results - MSS
+Univariable vs Multivariable Cox Results - DSS
 </caption>
 
 <thead>
@@ -3611,7 +3617,7 @@ CR
 
 </table>
 
-## Numeric table with 5-year OS, PFS, MSS
+## Numeric table with 5-year OS, PFS, DSS
 
 # Five-Year Survival Estimates by Response
 
@@ -3647,11 +3653,11 @@ results <- lapply(responses, function(resp) {
   d <- filter(dataDF, `Objective response` == resp)
   fit_OS  <- survfit(Surv(censor_time_OS,  censor_status_OS)  ~ 1, data = d)
   fit_PFS <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1, data = d)
-  fit_MSS <- survfit(Surv(censor_time_OS,  censor_status_MSS) ~ 1, data = d)
+  fit_DSS <- survfit(Surv(censor_time_OS,  censor_status_DSS) ~ 1, data = d)
 
   os_ci  <- get5yr_ci(fit_OS)
   pfs_ci <- get5yr_ci(fit_PFS)
-  mss_ci <- get5yr_ci(fit_MSS)
+  DSS_ci <- get5yr_ci(fit_DSS)
 
   data.frame(
     Response       = resp,
@@ -3661,9 +3667,9 @@ results <- lapply(responses, function(resp) {
     PFS_5yr        = pfs_ci$Estimate,
     PFS_5yr_Lower  = pfs_ci$Lower95,
     PFS_5yr_Upper  = pfs_ci$Upper95,
-    MSS_5yr        = mss_ci$Estimate,
-    MSS_5yr_Lower  = mss_ci$Lower95,
-    MSS_5yr_Upper  = mss_ci$Upper95
+    DSS_5yr        = DSS_ci$Estimate,
+    DSS_5yr_Lower  = DSS_ci$Lower95,
+    DSS_5yr_Upper  = DSS_ci$Upper95
   )
 })
 
@@ -3672,7 +3678,7 @@ five_year_table <- bind_rows(results) %>%
   select(Response,
          OS_5yr_pct, OS_5yr_Lower_pct, OS_5yr_Upper_pct,
          PFS_5yr_pct, PFS_5yr_Lower_pct, PFS_5yr_Upper_pct,
-         MSS_5yr_pct, MSS_5yr_Lower_pct, MSS_5yr_Upper_pct)
+         DSS_5yr_pct, DSS_5yr_Lower_pct, DSS_5yr_Upper_pct)
 
 print(five_year_table)
 ```
@@ -3680,10 +3686,10 @@ print(five_year_table)
     ##   Response OS_5yr_pct OS_5yr_Lower_pct OS_5yr_Upper_pct PFS_5yr_pct
     ## 1       CR   87.48618         84.45029         90.63121    73.74845
     ## 2       PR   44.01466         39.30324         49.29087    18.77321
-    ##   PFS_5yr_Lower_pct PFS_5yr_Upper_pct MSS_5yr_pct MSS_5yr_Lower_pct
+    ##   PFS_5yr_Lower_pct PFS_5yr_Upper_pct DSS_5yr_pct DSS_5yr_Lower_pct
     ## 1          69.79731          77.92325    93.44162          91.13900
     ## 2          15.07256          23.38245    52.69265          47.70295
-    ##   MSS_5yr_Upper_pct
+    ##   DSS_5yr_Upper_pct
     ## 1          95.80241
     ## 2          58.20427
 
@@ -3703,11 +3709,11 @@ pfs_lbls <- five_year_table %>%
     pfs_label = sprintf("%s: %.0f%% (%.0f–%.0f%%)",
                         Response, PFS_5yr_pct, PFS_5yr_Lower_pct, PFS_5yr_Upper_pct))
 
-mss_lbls <- five_year_table %>%
+DSS_lbls <- five_year_table %>%
   transmute(
     Response,
-    mss_label = sprintf("%s: %.0f%% (%.0f–%.0f%%)",
-                        Response, MSS_5yr_pct, MSS_5yr_Lower_pct, MSS_5yr_Upper_pct))
+    DSS_label = sprintf("%s: %.0f%% (%.0f–%.0f%%)",
+                        Response, DSS_5yr_pct, DSS_5yr_Lower_pct, DSS_5yr_Upper_pct))
 
 #adding a syntactically correct name for OR, as it was failing in the Survfit step
 dataDF$Objective_response = dataDF$`Objective response`
@@ -3764,6 +3770,14 @@ p_os <- ggsurvfit(fit_OS, size = 1.5) +
     hjust = 0
     )
 ```
+
+    ## Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+    ## ℹ Please use `linewidth` instead.
+    ## ℹ The deprecated feature was likely used in the ggsurvfit package.
+    ##   Please report the issue at <https://github.com/pharmaverse/ggsurvfit/issues>.
+    ## This warning is displayed once every 8 hours.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+    ## generated.
 
     ## Scale for x is already present.
     ## Adding another scale for x, which will replace the existing scale.
@@ -3826,16 +3840,16 @@ p_pfs <- ggsurvfit(fit_PFS, size = 1.5) +
     ## Adding another scale for x, which will replace the existing scale.
 
 ``` r
-# MSS plot
-ypos <- c(CR = five_year_table$MSS_5yr_pct[1], PR = five_year_table$MSS_5yr_pct[2])
+# DSS plot
+ypos <- c(CR = five_year_table$DSS_5yr_pct[1], PR = five_year_table$DSS_5yr_pct[2])
 
-fit_MSS <- survfit(
-  Surv(censor_time_OS, censor_status_MSS) ~ Objective_response,
+fit_DSS <- survfit(
+  Surv(censor_time_OS, censor_status_DSS) ~ Objective_response,
   data = dataDF
 )
-names(fit_MSS$strata) <- gsub("Objective_response=", "", names(fit_MSS$strata))
+names(fit_DSS$strata) <- gsub("Objective_response=", "", names(fit_DSS$strata))
 
-p_mss <- ggsurvfit(fit_MSS, size = 1.5) +
+p_DSS <- ggsurvfit(fit_DSS, size = 1.5) +
     add_censor_mark() +
     add_confidence_interval()+
     scale_ggsurvfit() +
@@ -3849,8 +3863,8 @@ p_mss <- ggsurvfit(fit_MSS, size = 1.5) +
     add_risktable_strata_symbol(symbol = "•", size = 20)+
     labs(
       x        = "Months after treatment initiation",
-      y        = "MSS (%)",
-      title = "Melanoma - Melanoma-specific Survival"
+      y        = "DSS (%)",
+      title = "Melanoma - Disease-specific Survival"
     ) +
     scale_x_continuous(breaks = seq(0, x_max, by = 12), limits = c(0, x_max)) +
     theme_classic() +
@@ -3873,7 +3887,7 @@ p_mss <- ggsurvfit(fit_MSS, size = 1.5) +
     "text",
     x     = x_max*0.25,
     y     = ypos[names(ypos)]*0.9/100,
-    label = paste0("5 year MSS for ",mss_lbls$mss_label),
+    label = paste0("5 year DSS for ",DSS_lbls$DSS_label),
     size  = 10,
     hjust = 0
     )
@@ -3895,7 +3909,7 @@ p_os
 ![](Survival_analysis_melanoma_files/figure-gfm/-%205%20year%20KM%20curves-2.png)<!-- -->
 
 ``` r
-p_mss
+p_DSS
 ```
 
 ![](Survival_analysis_melanoma_files/figure-gfm/-%205%20year%20KM%20curves-3.png)<!-- -->
@@ -3918,11 +3932,11 @@ results <- lapply(responses, function(resp) {
   d <- filter(dataDF_18mo, `Objective response` == resp)
   fit_OS  <- survfit(Surv(censor_time_OS,  censor_status_OS)  ~ 1, data = d)
   fit_PFS <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1, data = d)
-  fit_MSS <- survfit(Surv(censor_time_OS,  censor_status_MSS) ~ 1, data = d)
+  fit_DSS <- survfit(Surv(censor_time_OS,  censor_status_DSS) ~ 1, data = d)
 
   os_ci  <- get5yr_ci(fit_OS)
   pfs_ci <- get5yr_ci(fit_PFS)
-  mss_ci <- get5yr_ci(fit_MSS)
+  DSS_ci <- get5yr_ci(fit_DSS)
 
   data.frame(
     Response       = resp,
@@ -3932,9 +3946,9 @@ results <- lapply(responses, function(resp) {
     PFS_5yr        = pfs_ci$Estimate,
     PFS_5yr_Lower  = pfs_ci$Lower95,
     PFS_5yr_Upper  = pfs_ci$Upper95,
-    MSS_5yr        = mss_ci$Estimate,
-    MSS_5yr_Lower  = mss_ci$Lower95,
-    MSS_5yr_Upper  = mss_ci$Upper95
+    DSS_5yr        = DSS_ci$Estimate,
+    DSS_5yr_Lower  = DSS_ci$Lower95,
+    DSS_5yr_Upper  = DSS_ci$Upper95
   )
 })
 
@@ -3943,7 +3957,7 @@ five_year_table <- bind_rows(results) %>%
   select(Response,
          OS_5yr_pct, OS_5yr_Lower_pct, OS_5yr_Upper_pct,
          PFS_5yr_pct, PFS_5yr_Lower_pct, PFS_5yr_Upper_pct,
-         MSS_5yr_pct, MSS_5yr_Lower_pct, MSS_5yr_Upper_pct)
+         DSS_5yr_pct, DSS_5yr_Lower_pct, DSS_5yr_Upper_pct)
 
 
 pfs_lbls <- five_year_table %>%
@@ -3960,7 +3974,7 @@ fit_PFS <- survfit(
 )
 names(fit_PFS$strata) <- gsub("Objective_response=", "", names(fit_PFS$strata))
 
-x_max <- 32
+x_max <- 42
 p_pfs <- ggsurvfit(fit_PFS, size = 1.5) +
     add_censor_mark() +
     add_confidence_interval()+
@@ -4045,18 +4059,7 @@ p_os <- ggsurvfit(fit_OS, size = 1.5) +
     scale_color_manual(name=c("CR", "PR"),values = c("CR"="#00BA38", "PR"="#00BFC4")) +
     scale_fill_manual(name=c("CR", "PR"),values = c("CR"="#00BA38", "PR"="#00BFC4"))
 
-p_pfs
-```
 
-![](Survival_analysis_melanoma_files/figure-gfm/landmark%20analysis-1.png)<!-- -->
-
-``` r
-p_os
-```
-
-![](Survival_analysis_melanoma_files/figure-gfm/landmark%20analysis-2.png)<!-- -->
-
-``` r
 hr_OS_resp_18  <- coxph(Surv(censor_time_OS, censor_status_OS) ~ Objective_response, data = dataDF_18mo)
 s_cox_18   <- summary(hr_OS_resp_18)
 # extract HR, CI and p
@@ -4065,13 +4068,28 @@ ci_lo_18  <- s_cox_18$conf.int[, "lower .95"]
 ci_hi_18  <- s_cox_18$conf.int[, "upper .95"]
 pval_18   <- s_cox_18$coefficients[, "Pr(>|z|)"]
 hr_lab_18 <- sprintf("HR=%.2f (95%% CI %.2f–%.2f)", hr_18, ci_lo_18, ci_hi_18)
-p_lab_18  <- paste0("p = ", sub("^0\\.", ".", sprintf("%.4f", pval_18)))
+p_lab_18  <- ifelse(pval_18 < 0.001, "p < 0.001", 
+                    paste0("p = ", sub("^0\\.", ".", sprintf("%.4f", pval_18))))
 
 print(paste0("18-month landmark OS ",
              hr_lab_18, " - ", p_lab_18))
 ```
 
-    ## [1] "18-month landmark OS HR=3.97 (95% CI 2.65–5.96) - p = .0000"
+    ## [1] "18-month landmark OS HR=3.97 (95% CI 2.65–5.96) - p < 0.001"
+
+``` r
+p_os+
+   annotate(
+    "text",
+    x     = 0.25,
+    y     = 0.25,
+    label = paste0(hr_lab_18, " \n ", p_lab_18),
+    size  = 10,
+    hjust = 0
+    )
+```
+
+![](Survival_analysis_melanoma_files/figure-gfm/landmark%20analysis-1.png)<!-- -->
 
 ``` r
 hr_PFS_resp_18  <- coxph(Surv(censor_time_PFS, censor_status_PFS) ~ Objective_response, data = dataDF_18mo)
@@ -4082,12 +4100,27 @@ ci_lo_18  <- s_cox_18$conf.int[, "lower .95"]
 ci_hi_18  <- s_cox_18$conf.int[, "upper .95"]
 pval_18   <- s_cox_18$coefficients[, "Pr(>|z|)"]
 hr_lab_18 <- sprintf("HR=%.2f (95%% CI %.2f–%.2f)", hr_18, ci_lo_18, ci_hi_18)
-p_lab_18  <- paste0("p = ", sub("^0\\.", ".", sprintf("%.4f", pval_18)))
+p_lab_18  <- ifelse(pval_18 < 0.001, "p < 0.001", 
+                    paste0("p = ", sub("^0\\.", ".", sprintf("%.4f", pval_18))))
 
 print(paste0("18-month landmark PFS ",
              hr_lab_18, " - ", p_lab_18))
 ```
 
-    ## [1] "18-month landmark PFS HR=4.38 (95% CI 3.28–5.86) - p = .0000"
+    ## [1] "18-month landmark PFS HR=4.38 (95% CI 3.28–5.86) - p < 0.001"
+
+``` r
+p_pfs+
+   annotate(
+    "text",
+    x     = 0.25,
+    y     = 0.25,
+    label = paste0(hr_lab_18, " \n ", p_lab_18),
+    size  = 10,
+    hjust = 0
+    )
+```
+
+![](Survival_analysis_melanoma_files/figure-gfm/landmark%20analysis-2.png)<!-- -->
 
 \`\`\`

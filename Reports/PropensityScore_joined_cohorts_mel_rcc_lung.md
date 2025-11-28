@@ -1,7 +1,7 @@
 Propensity Scores Calculation and Survival Analysis
 ================
 Mario Presti
-First created on May 2025 Updated on 25 November 2025
+First created on May 2025 Updated on 28 November 2025
 
 - [Introduction](#introduction)
 - [Loading Libraries](#loading-libraries)
@@ -1699,53 +1699,53 @@ power_for_pairs_target_HR <- function(df,
   do.call(rbind, out_list)
 }
 
-power_pairs_CR_ls <- list()
-for (i in seq_along(comparisons)){
-  data <- subset(dataDF, Tumor %in% unlist(comparisons[i]))
-  fit_CR <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1,
-                      data = data)
-  m_ref_CR   <- as.numeric(summary(fit_CR)$table["median"])
-  delta_CR   <- 12
-  HR_target_CR <- m_ref_CR / (m_ref_CR + delta_CR)
-
-  power_pairs_CR <- power_for_pairs_target_HR(
-  df           = data,
-  comparisons  = comparisons[i],
-  response_level = "CR",
-  HR_target    = HR_target_CR,
-  timevar      = "censor_time_PFS",
-  statusvar    = "censor_status_PFS",
-  alpha        = 0.05)
-  
-  power_pairs_CR_ls[[i]] <- power_pairs_CR 
-}
-
-power_CR <- do.call(rbind, power_pairs_CR_ls)
-power_CR$group <- "Unmatched CR"
-
-power_pairs_PR_ls <- list()
-for (i in seq_along(comparisons)){
-  data <- subset(dataDF, Tumor %in% unlist(comparisons[i]))
-  fit_PR <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1,
-                      data = data)
-  m_ref_PR   <- as.numeric(summary(fit_PR)$table["median"])
-  delta_PR   <- 12
-  HR_target_PR <- m_ref_PR / (m_ref_PR + delta_PR)
-
-  power_pairs_PR <- power_for_pairs_target_HR(
-  df           = data,
-  comparisons  = comparisons[i],
-  response_level = "PR",
-  HR_target    = HR_target_PR,
-  timevar      = "censor_time_PFS",
-  statusvar    = "censor_status_PFS",
-  alpha        = 0.05)
-  
-  power_pairs_PR_ls[[i]] <- power_pairs_PR 
-}
-
-power_PR <- do.call(rbind, power_pairs_PR_ls)
-power_PR$group <- "Unmatched PR"
+# power_pairs_CR_ls <- list()
+# for (i in seq_along(comparisons)){
+#   data <- subset(dataDF, Tumor %in% unlist(comparisons[i]))
+#   fit_CR <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1,
+#                       data = data)
+#   m_ref_CR   <- as.numeric(summary(fit_CR)$table["median"])
+#   delta_CR   <- 12
+#   HR_target_CR <- m_ref_CR / (m_ref_CR + delta_CR)
+# 
+#   power_pairs_CR <- power_for_pairs_target_HR(
+#   df           = data,
+#   comparisons  = comparisons[i],
+#   response_level = "CR",
+#   HR_target    = HR_target_CR,
+#   timevar      = "censor_time_PFS",
+#   statusvar    = "censor_status_PFS",
+#   alpha        = 0.05)
+#   
+#   power_pairs_CR_ls[[i]] <- power_pairs_CR 
+# }
+# 
+# power_CR <- do.call(rbind, power_pairs_CR_ls)
+# power_CR$group <- "Unmatched CR"
+# 
+# power_pairs_PR_ls <- list()
+# for (i in seq_along(comparisons)){
+#   data <- subset(dataDF, Tumor %in% unlist(comparisons[i]))
+#   fit_PR <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1,
+#                       data = data)
+#   m_ref_PR   <- as.numeric(summary(fit_PR)$table["median"])
+#   delta_PR   <- 12
+#   HR_target_PR <- m_ref_PR / (m_ref_PR + delta_PR)
+# 
+#   power_pairs_PR <- power_for_pairs_target_HR(
+#   df           = data,
+#   comparisons  = comparisons[i],
+#   response_level = "PR",
+#   HR_target    = HR_target_PR,
+#   timevar      = "censor_time_PFS",
+#   statusvar    = "censor_status_PFS",
+#   alpha        = 0.05)
+#   
+#   power_pairs_PR_ls[[i]] <- power_pairs_PR 
+# }
+# 
+# power_PR <- do.call(rbind, power_pairs_PR_ls)
+# power_PR$group <- "Unmatched PR"
 
 power_pairs_psm_ls <- list()
 for (i in seq_along(comparisons)){
@@ -1770,33 +1770,21 @@ for (i in seq_along(comparisons)){
 
 power_psm <- do.call(rbind, power_pairs_psm_ls)
 power_psm$group <- "PSM"
-
-power_table_final <- rbind(power_CR,power_PR, power_psm)
-power_table_final
+power_psm
 ```
 
-    ##                           comparison response HR_target  n1  n2 events_D
-    ## Melanoma vs RCC      Melanoma vs RCC       CR 0.7771705 576  79      147
-    ## Melanoma vs NSCLC  Melanoma vs NSCLC       CR 0.7201520 576  73      150
-    ## RCC vs NSCLC            RCC vs NSCLC       CR 0.6736473  79  73       45
-    ## Melanoma vs RCC1     Melanoma vs RCC       PR 0.7771705 620 178      533
-    ## Melanoma vs NSCLC1 Melanoma vs NSCLC       PR 0.7201520 620 591      862
-    ## RCC vs NSCLC1           RCC vs NSCLC       PR 0.6736473 178 591      591
-    ## Melanoma vs RCC2     Melanoma vs RCC     <NA> 0.7222797 256 256      276
-    ## Melanoma vs NSCLC2 Melanoma vs NSCLC     <NA> 0.6661915 472 472      606
-    ## RCC vs NSCLC2           RCC vs NSCLC     <NA> 0.6813344 219 219      303
-    ##                        power        group
-    ## Melanoma vs RCC    0.1673872 Unmatched CR
-    ## Melanoma vs NSCLC  0.2452294 Unmatched CR
-    ## RCC vs NSCLC       0.2624001 Unmatched CR
-    ## Melanoma vs RCC1   0.6782874 Unmatched PR
-    ## Melanoma vs NSCLC1 0.9978682 Unmatched PR
-    ## RCC vs NSCLC1      0.9817206 Unmatched PR
-    ## Melanoma vs RCC2   0.7711189          PSM
-    ## Melanoma vs NSCLC2 0.9988151          PSM
-    ## RCC vs NSCLC2      0.9161399          PSM
+    ##                          comparison response HR_target  n1  n2 events_D
+    ## Melanoma vs RCC     Melanoma vs RCC       NA 0.7222797 256 256      276
+    ## Melanoma vs NSCLC Melanoma vs NSCLC       NA 0.6661915 472 472      606
+    ## RCC vs NSCLC           RCC vs NSCLC       NA 0.6813344 219 219      303
+    ##                       power group
+    ## Melanoma vs RCC   0.7711189   PSM
+    ## Melanoma vs NSCLC 0.9988151   PSM
+    ## RCC vs NSCLC      0.9161399   PSM
 
 ``` r
+# power_table_final <- rbind(power_CR,power_PR, power_psm)
+# power_table_final
 # kable(
 #   power_table_final,
 #   format    = "html",

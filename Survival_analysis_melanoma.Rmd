@@ -218,7 +218,7 @@ dataDF$censor_status_OS <- ifelse(dataDF$OS_days/30 > 60, 0, dataDF$Dead)
 dataDF$censor_time_PFS   <- pmin(dataDF$PFS_days/30, 60)
 dataDF$censor_status_PFS <- ifelse(dataDF$PFS_days/30 > 60, 0, dataDF$Progressed)
 #Administrative censoring at 60 months
-dataDF$censor_status_MSS <- ifelse(dataDF$OS_days/30 > 60, 0, dataDF$Dead_Mel)
+dataDF$censor_status_DSS <- ifelse(dataDF$OS_days/30 > 60, 0, dataDF$Dead_Mel)
 ```
 
 ```{r select descriptive features,warning=F, message=F,eval=TRUE}
@@ -821,10 +821,10 @@ saveWorkbook(
 
 
 # Melanoma specific survival
-```{r Multiple Univariate analysis - Including missing data - MSS}
+```{r Multiple Univariate analysis - Including missing data - DSS}
 surv_time <- "censor_time_OS"
-surv_status <- "censor_status_MSS"
-surv_time_label <- "MSS"
+surv_status <- "censor_status_DSS"
+surv_time_label <- "DSS"
 # Find the best reference for each feature
 best_refs <- character(length(features))
 names(best_refs) <- features
@@ -911,9 +911,9 @@ forest_plot(multiple_uni,
 ```
 
 
-```{r Multivariate Survival Analysis - only complete cases - MSS, fig.width=10, fig.height=8, warning=FALSE, message=FALSE, eval=TRUE}
+```{r Multivariate Survival Analysis - only complete cases - DSS, fig.width=10, fig.height=8, warning=FALSE, message=FALSE, eval=TRUE}
 surv_time <- "censor_time_OS"
-surv_status <- "censor_status_MSS"
+surv_status <- "censor_status_DSS"
 surv_time_label <- "OS"
 # # To remove both (NAs and empty):
 dataDF_complete <- dataDF %>%
@@ -965,9 +965,9 @@ print(forest_model_sign)
 
 ```
 
-# Combined Univariable vs Multivariable Forest Plots - MSS
+# Combined Univariable vs Multivariable Forest Plots - DSS
 
-```{r Combined Univariable vs Multivariable Forest Plots - MSS, fig.width=14, fig.height=7, warning=FALSE, message=FALSE, eval=TRUE}
+```{r Combined Univariable vs Multivariable Forest Plots - DSS, fig.width=14, fig.height=7, warning=FALSE, message=FALSE, eval=TRUE}
 # Prepare empty list to collect rows
 rows <- vector("list", 0)
 
@@ -1057,7 +1057,7 @@ aligns <- c("l", "l", rep("c", n_cols - 2))
 results_df %>%
   kable(
     format = "html",
-    caption = "Univariable vs Multivariable Cox Results - MSS",
+    caption = "Univariable vs Multivariable Cox Results - DSS",
     align   = aligns,
     escape  = FALSE
   ) %>%
@@ -1079,7 +1079,7 @@ results_df %>%
 
 
 
-## Numeric table with 5-year OS, PFS, MSS
+## Numeric table with 5-year OS, PFS, DSS
 # Five-Year Survival Estimates by Response
 
 ```{r five_year_survival_CI, warning=FALSE, message=FALSE}
@@ -1114,11 +1114,11 @@ results <- lapply(responses, function(resp) {
   d <- filter(dataDF, `Objective response` == resp)
   fit_OS  <- survfit(Surv(censor_time_OS,  censor_status_OS)  ~ 1, data = d)
   fit_PFS <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1, data = d)
-  fit_MSS <- survfit(Surv(censor_time_OS,  censor_status_MSS) ~ 1, data = d)
+  fit_DSS <- survfit(Surv(censor_time_OS,  censor_status_DSS) ~ 1, data = d)
 
   os_ci  <- get5yr_ci(fit_OS)
   pfs_ci <- get5yr_ci(fit_PFS)
-  mss_ci <- get5yr_ci(fit_MSS)
+  DSS_ci <- get5yr_ci(fit_DSS)
 
   data.frame(
     Response       = resp,
@@ -1128,9 +1128,9 @@ results <- lapply(responses, function(resp) {
     PFS_5yr        = pfs_ci$Estimate,
     PFS_5yr_Lower  = pfs_ci$Lower95,
     PFS_5yr_Upper  = pfs_ci$Upper95,
-    MSS_5yr        = mss_ci$Estimate,
-    MSS_5yr_Lower  = mss_ci$Lower95,
-    MSS_5yr_Upper  = mss_ci$Upper95
+    DSS_5yr        = DSS_ci$Estimate,
+    DSS_5yr_Lower  = DSS_ci$Lower95,
+    DSS_5yr_Upper  = DSS_ci$Upper95
   )
 })
 
@@ -1139,7 +1139,7 @@ five_year_table <- bind_rows(results) %>%
   select(Response,
          OS_5yr_pct, OS_5yr_Lower_pct, OS_5yr_Upper_pct,
          PFS_5yr_pct, PFS_5yr_Lower_pct, PFS_5yr_Upper_pct,
-         MSS_5yr_pct, MSS_5yr_Lower_pct, MSS_5yr_Upper_pct)
+         DSS_5yr_pct, DSS_5yr_Lower_pct, DSS_5yr_Upper_pct)
 
 print(five_year_table)
 ```
@@ -1161,11 +1161,11 @@ pfs_lbls <- five_year_table %>%
     pfs_label = sprintf("%s: %.0f%% (%.0f–%.0f%%)",
                         Response, PFS_5yr_pct, PFS_5yr_Lower_pct, PFS_5yr_Upper_pct))
 
-mss_lbls <- five_year_table %>%
+DSS_lbls <- five_year_table %>%
   transmute(
     Response,
-    mss_label = sprintf("%s: %.0f%% (%.0f–%.0f%%)",
-                        Response, MSS_5yr_pct, MSS_5yr_Lower_pct, MSS_5yr_Upper_pct))
+    DSS_label = sprintf("%s: %.0f%% (%.0f–%.0f%%)",
+                        Response, DSS_5yr_pct, DSS_5yr_Lower_pct, DSS_5yr_Upper_pct))
 
 #adding a syntactically correct name for OR, as it was failing in the Survfit step
 dataDF$Objective_response = dataDF$`Objective response`
@@ -1275,16 +1275,16 @@ p_pfs <- ggsurvfit(fit_PFS, size = 1.5) +
     hjust = 0
     )
 
-# MSS plot
-ypos <- c(CR = five_year_table$MSS_5yr_pct[1], PR = five_year_table$MSS_5yr_pct[2])
+# DSS plot
+ypos <- c(CR = five_year_table$DSS_5yr_pct[1], PR = five_year_table$DSS_5yr_pct[2])
 
-fit_MSS <- survfit(
-  Surv(censor_time_OS, censor_status_MSS) ~ Objective_response,
+fit_DSS <- survfit(
+  Surv(censor_time_OS, censor_status_DSS) ~ Objective_response,
   data = dataDF
 )
-names(fit_MSS$strata) <- gsub("Objective_response=", "", names(fit_MSS$strata))
+names(fit_DSS$strata) <- gsub("Objective_response=", "", names(fit_DSS$strata))
 
-p_mss <- ggsurvfit(fit_MSS, size = 1.5) +
+p_DSS <- ggsurvfit(fit_DSS, size = 1.5) +
     add_censor_mark() +
     add_confidence_interval()+
     scale_ggsurvfit() +
@@ -1298,8 +1298,8 @@ p_mss <- ggsurvfit(fit_MSS, size = 1.5) +
     add_risktable_strata_symbol(symbol = "•", size = 20)+
     labs(
       x        = "Months after treatment initiation",
-      y        = "MSS (%)",
-      title = "Melanoma - Melanoma-specific Survival"
+      y        = "DSS (%)",
+      title = "Melanoma - Disease-specific Survival"
     ) +
     scale_x_continuous(breaks = seq(0, x_max, by = 12), limits = c(0, x_max)) +
     theme_classic() +
@@ -1322,14 +1322,14 @@ p_mss <- ggsurvfit(fit_MSS, size = 1.5) +
     "text",
     x     = x_max*0.25,
     y     = ypos[names(ypos)]*0.9/100,
-    label = paste0("5 year MSS for ",mss_lbls$mss_label),
+    label = paste0("5 year DSS for ",DSS_lbls$DSS_label),
     size  = 10,
     hjust = 0
     )
 
 p_pfs
 p_os
-p_mss
+p_DSS
 ```
 
 
@@ -1350,11 +1350,11 @@ results <- lapply(responses, function(resp) {
   d <- filter(dataDF_18mo, `Objective response` == resp)
   fit_OS  <- survfit(Surv(censor_time_OS,  censor_status_OS)  ~ 1, data = d)
   fit_PFS <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1, data = d)
-  fit_MSS <- survfit(Surv(censor_time_OS,  censor_status_MSS) ~ 1, data = d)
+  fit_DSS <- survfit(Surv(censor_time_OS,  censor_status_DSS) ~ 1, data = d)
 
   os_ci  <- get5yr_ci(fit_OS)
   pfs_ci <- get5yr_ci(fit_PFS)
-  mss_ci <- get5yr_ci(fit_MSS)
+  DSS_ci <- get5yr_ci(fit_DSS)
 
   data.frame(
     Response       = resp,
@@ -1364,9 +1364,9 @@ results <- lapply(responses, function(resp) {
     PFS_5yr        = pfs_ci$Estimate,
     PFS_5yr_Lower  = pfs_ci$Lower95,
     PFS_5yr_Upper  = pfs_ci$Upper95,
-    MSS_5yr        = mss_ci$Estimate,
-    MSS_5yr_Lower  = mss_ci$Lower95,
-    MSS_5yr_Upper  = mss_ci$Upper95
+    DSS_5yr        = DSS_ci$Estimate,
+    DSS_5yr_Lower  = DSS_ci$Lower95,
+    DSS_5yr_Upper  = DSS_ci$Upper95
   )
 })
 
@@ -1375,7 +1375,7 @@ five_year_table <- bind_rows(results) %>%
   select(Response,
          OS_5yr_pct, OS_5yr_Lower_pct, OS_5yr_Upper_pct,
          PFS_5yr_pct, PFS_5yr_Lower_pct, PFS_5yr_Upper_pct,
-         MSS_5yr_pct, MSS_5yr_Lower_pct, MSS_5yr_Upper_pct)
+         DSS_5yr_pct, DSS_5yr_Lower_pct, DSS_5yr_Upper_pct)
 
 
 pfs_lbls <- five_year_table %>%
