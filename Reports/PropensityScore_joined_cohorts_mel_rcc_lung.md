@@ -1,7 +1,7 @@
 Propensity Scores Calculation and Survival Analysis
 ================
 Mario Presti
-First created on May 2025 Updated on 28 November 2025
+First created on May 2025 Updated on 29 November 2025
 
 - [Introduction](#introduction)
 - [Loading Libraries](#loading-libraries)
@@ -1805,60 +1805,60 @@ power_all_delta_ls <- list()
 
 for (delta in deltas) {
 
-  ## ---------- CR: unmatched ----------
-  power_pairs_CR_ls <- list()
-  for (i in seq_along(comparisons)) {
-    data <- subset(dataDF, Tumor %in% unlist(comparisons[i]))
-    
-    fit_CR <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1,
-                      data = data)
-    m_ref_CR     <- as.numeric(summary(fit_CR)$table["median"])
-    delta_CR     <- delta
-    HR_target_CR <- m_ref_CR / (m_ref_CR + delta_CR)
-
-    power_pairs_CR <- power_for_pairs_target_HR(
-      df            = data,
-      comparisons   = comparisons[i],
-      response_level = "CR",
-      HR_target     = HR_target_CR,
-      timevar       = "censor_time_PFS",
-      statusvar     = "censor_status_PFS",
-      alpha         = 0.05
-    )
-    
-    power_pairs_CR_ls[[i]] <- power_pairs_CR 
-  }
-  power_CR <- do.call(rbind, power_pairs_CR_ls)
-  power_CR$group <- "Unmatched CR"
-  power_CR$delta <- delta
-  
-  ## ---------- PR: unmatched ----------
-  power_pairs_PR_ls <- list()
-  for (i in seq_along(comparisons)) {
-    data <- subset(dataDF, Tumor %in% unlist(comparisons[i]))
-    
-    fit_PR <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1,
-                      data = data)
-    m_ref_PR     <- as.numeric(summary(fit_PR)$table["median"])
-    delta_PR     <- delta
-    HR_target_PR <- m_ref_PR / (m_ref_PR + delta_PR)
-
-    power_pairs_PR <- power_for_pairs_target_HR(
-      df            = data,
-      comparisons   = comparisons[i],
-      response_level = "PR",
-      HR_target     = HR_target_PR,
-      timevar       = "censor_time_PFS",
-      statusvar     = "censor_status_PFS",
-      alpha         = 0.05
-    )
-    
-    power_pairs_PR_ls[[i]] <- power_pairs_PR 
-  }
-  power_PR <- do.call(rbind, power_pairs_PR_ls)
-  power_PR$group <- "Unmatched PR"
-  power_PR$delta <- delta
-  
+  # ## ---------- CR: unmatched ----------
+  # power_pairs_CR_ls <- list()
+  # for (i in seq_along(comparisons)) {
+  #   data <- subset(dataDF, Tumor %in% unlist(comparisons[i]))
+  #   
+  #   fit_CR <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1,
+  #                     data = data)
+  #   m_ref_CR     <- as.numeric(summary(fit_CR)$table["median"])
+  #   delta_CR     <- delta
+  #   HR_target_CR <- m_ref_CR / (m_ref_CR + delta_CR)
+  # 
+  #   power_pairs_CR <- power_for_pairs_target_HR(
+  #     df            = data,
+  #     comparisons   = comparisons[i],
+  #     response_level = "CR",
+  #     HR_target     = HR_target_CR,
+  #     timevar       = "censor_time_PFS",
+  #     statusvar     = "censor_status_PFS",
+  #     alpha         = 0.05
+  #   )
+  #   
+  #   power_pairs_CR_ls[[i]] <- power_pairs_CR 
+  # }
+  # power_CR <- do.call(rbind, power_pairs_CR_ls)
+  # power_CR$group <- "Unmatched CR"
+  # power_CR$delta <- delta
+  # 
+  # ## ---------- PR: unmatched ----------
+  # power_pairs_PR_ls <- list()
+  # for (i in seq_along(comparisons)) {
+  #   data <- subset(dataDF, Tumor %in% unlist(comparisons[i]))
+  #   
+  #   fit_PR <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1,
+  #                     data = data)
+  #   m_ref_PR     <- as.numeric(summary(fit_PR)$table["median"])
+  #   delta_PR     <- delta
+  #   HR_target_PR <- m_ref_PR / (m_ref_PR + delta_PR)
+  # 
+  #   power_pairs_PR <- power_for_pairs_target_HR(
+  #     df            = data,
+  #     comparisons   = comparisons[i],
+  #     response_level = "PR",
+  #     HR_target     = HR_target_PR,
+  #     timevar       = "censor_time_PFS",
+  #     statusvar     = "censor_status_PFS",
+  #     alpha         = 0.05
+  #   )
+  #   
+  #   power_pairs_PR_ls[[i]] <- power_pairs_PR 
+  # }
+  # power_PR <- do.call(rbind, power_pairs_PR_ls)
+  # power_PR$group <- "Unmatched PR"
+  # power_PR$delta <- delta
+  # 
   ## ---------- PSM: all patients (no DOR restriction) ----------
   power_pairs_psm_ls <- list()
   for (i in seq_along(comparisons)) {
@@ -1888,7 +1888,7 @@ for (delta in deltas) {
   
   ## ---------- bind for this delta ----------
   power_all_delta_ls[[as.character(delta)]] <- 
-    rbind(power_CR, power_PR, power_psm)
+    rbind(power_psm) #removed power_CR, power_PR, 
 }
 
 # Final long table with all deltas
@@ -1933,3 +1933,105 @@ ggplot(power_table_heat_plot,
 ```
 
 ![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/power%20heatmap-1.png)<!-- -->
+
+``` r
+rownames(power_table_heat) <- NULL
+print(power_table_heat)
+```
+
+    ##           comparison response HR_target  n1  n2 events_D     power group delta
+    ## 1    Melanoma vs RCC       NA 0.9123036 256 256      276 0.1155438   PSM     3
+    ## 2  Melanoma vs NSCLC       NA 0.8886776 472 472      606 0.3059717   PSM     3
+    ## 3       RCC vs NSCLC       NA 0.8953136 219 219      303 0.1592545   PSM     3
+    ## 4    Melanoma vs RCC       NA 0.8387484 256 256      276 0.3087876   PSM     6
+    ## 5  Melanoma vs NSCLC       NA 0.7996578 472 472      606 0.7857825   PSM     6
+    ## 6       RCC vs NSCLC       NA 0.8104686 219 219      303 0.4478882   PSM     6
+    ## 7    Melanoma vs RCC       NA 0.7761692 256 256      276 0.5575689   PSM     9
+    ## 8  Melanoma vs NSCLC       NA 0.7268485 472 472      606 0.9754035   PSM     9
+    ## 9       RCC vs NSCLC       NA 0.7403124 219 219      303 0.7444142   PSM     9
+    ## 10   Melanoma vs RCC       NA 0.7222797 256 256      276 0.7711189   PSM    12
+    ## 11 Melanoma vs NSCLC       NA 0.6661915 472 472      606 0.9988151   PSM    12
+    ## 12      RCC vs NSCLC       NA 0.6813344 219 219      303 0.9161399   PSM    12
+    ## 13   Melanoma vs RCC       NA 0.6753875 256 256      276 0.9032211   PSM    15
+    ## 14 Melanoma vs NSCLC       NA 0.6148785 472 472      606 0.9999716   PSM    15
+    ## 15      RCC vs NSCLC       NA 0.6310601 219 219      303 0.9796564   PSM    15
+    ## 16   Melanoma vs RCC       NA 0.6342128 256 256      276 0.9658203   PSM    18
+    ## 17 Melanoma vs NSCLC       NA 0.5709050 472 472      606 0.9999996   PSM    18
+    ## 18      RCC vs NSCLC       NA 0.5876953 219 219      303 0.9961657   PSM    18
+    ## 19   Melanoma vs RCC       NA 0.5977700 256 256      276 0.9896717   PSM    21
+    ## 20 Melanoma vs NSCLC       NA 0.5328013 472 472      606 1.0000000   PSM    21
+    ## 21      RCC vs NSCLC       NA 0.5499071 219 219      303 0.9994122   PSM    21
+    ## 22   Melanoma vs RCC       NA 0.5652878 256 256      276 0.9972678   PSM    24
+    ## 23 Melanoma vs NSCLC       NA 0.4994656 472 472      606 1.0000000   PSM    24
+    ## 24      RCC vs NSCLC       NA 0.5166847 219 219      303 0.9999238   PSM    24
+    ## 25   Melanoma vs RCC       NA 0.5361537 256 256      276 0.9993542   PSM    27
+    ## 26 Melanoma vs NSCLC       NA 0.4700557 472 472      606 1.0000000   PSM    27
+    ## 27      RCC vs NSCLC       NA 0.4872480 219 219      303 0.9999914   PSM    27
+    ## 28   Melanoma vs RCC       NA 0.5098755 256 256      276 0.9998612   PSM    30
+    ## 29 Melanoma vs NSCLC       NA 0.4439167 472 472      606 1.0000000   PSM    30
+    ## 30      RCC vs NSCLC       NA 0.4609845 219 219      303 0.9999991   PSM    30
+    ## 31   Melanoma vs RCC       NA 0.4860528 256 256      276 0.9999724   PSM    33
+    ## 32 Melanoma vs NSCLC       NA 0.4205316 472 472      606 1.0000000   PSM    33
+    ## 33      RCC vs NSCLC       NA 0.4374076 219 219      303 0.9999999   PSM    33
+    ## 34   Melanoma vs RCC       NA 0.4643569 256 256      276 0.9999949   PSM    36
+    ## 35 Melanoma vs NSCLC       NA 0.3994871 472 472      606 1.0000000   PSM    36
+    ## 36      RCC vs NSCLC       NA 0.4161250 219 219      303 1.0000000   PSM    36
+    ## 37   Melanoma vs RCC       NA 0.4445152 256 256      276 0.9999991   PSM    39
+    ## 38 Melanoma vs NSCLC       NA 0.3804484 472 472      606 1.0000000   PSM    39
+    ## 39      RCC vs NSCLC       NA 0.3968173 219 219      303 1.0000000   PSM    39
+    ## 40   Melanoma vs RCC       NA 0.4262995 256 256      276 0.9999998   PSM    42
+    ## 41 Melanoma vs NSCLC       NA 0.3631418 472 472      606 1.0000000   PSM    42
+    ## 42      RCC vs NSCLC       NA 0.3792219 219 219      303 1.0000000   PSM    42
+
+``` r
+cat("Power for:\n")
+```
+
+    ## Power for:
+
+``` r
+cat(paste0(power_table_heat$comparison, " with ", power_table_heat$delta, " months difference is ", round(power_table_heat$power,digits = 3), "\n"))
+```
+
+    ## Melanoma vs RCC with 3 months difference is 0.116
+    ##  Melanoma vs NSCLC with 3 months difference is 0.306
+    ##  RCC vs NSCLC with 3 months difference is 0.159
+    ##  Melanoma vs RCC with 6 months difference is 0.309
+    ##  Melanoma vs NSCLC with 6 months difference is 0.786
+    ##  RCC vs NSCLC with 6 months difference is 0.448
+    ##  Melanoma vs RCC with 9 months difference is 0.558
+    ##  Melanoma vs NSCLC with 9 months difference is 0.975
+    ##  RCC vs NSCLC with 9 months difference is 0.744
+    ##  Melanoma vs RCC with 12 months difference is 0.771
+    ##  Melanoma vs NSCLC with 12 months difference is 0.999
+    ##  RCC vs NSCLC with 12 months difference is 0.916
+    ##  Melanoma vs RCC with 15 months difference is 0.903
+    ##  Melanoma vs NSCLC with 15 months difference is 1
+    ##  RCC vs NSCLC with 15 months difference is 0.98
+    ##  Melanoma vs RCC with 18 months difference is 0.966
+    ##  Melanoma vs NSCLC with 18 months difference is 1
+    ##  RCC vs NSCLC with 18 months difference is 0.996
+    ##  Melanoma vs RCC with 21 months difference is 0.99
+    ##  Melanoma vs NSCLC with 21 months difference is 1
+    ##  RCC vs NSCLC with 21 months difference is 0.999
+    ##  Melanoma vs RCC with 24 months difference is 0.997
+    ##  Melanoma vs NSCLC with 24 months difference is 1
+    ##  RCC vs NSCLC with 24 months difference is 1
+    ##  Melanoma vs RCC with 27 months difference is 0.999
+    ##  Melanoma vs NSCLC with 27 months difference is 1
+    ##  RCC vs NSCLC with 27 months difference is 1
+    ##  Melanoma vs RCC with 30 months difference is 1
+    ##  Melanoma vs NSCLC with 30 months difference is 1
+    ##  RCC vs NSCLC with 30 months difference is 1
+    ##  Melanoma vs RCC with 33 months difference is 1
+    ##  Melanoma vs NSCLC with 33 months difference is 1
+    ##  RCC vs NSCLC with 33 months difference is 1
+    ##  Melanoma vs RCC with 36 months difference is 1
+    ##  Melanoma vs NSCLC with 36 months difference is 1
+    ##  RCC vs NSCLC with 36 months difference is 1
+    ##  Melanoma vs RCC with 39 months difference is 1
+    ##  Melanoma vs NSCLC with 39 months difference is 1
+    ##  RCC vs NSCLC with 39 months difference is 1
+    ##  Melanoma vs RCC with 42 months difference is 1
+    ##  Melanoma vs NSCLC with 42 months difference is 1
+    ##  RCC vs NSCLC with 42 months difference is 1

@@ -1350,60 +1350,60 @@ power_all_delta_ls <- list()
 
 for (delta in deltas) {
 
-  ## ---------- CR: unmatched ----------
-  power_pairs_CR_ls <- list()
-  for (i in seq_along(comparisons)) {
-    data <- subset(dataDF, Tumor %in% unlist(comparisons[i]))
-    
-    fit_CR <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1,
-                      data = data)
-    m_ref_CR     <- as.numeric(summary(fit_CR)$table["median"])
-    delta_CR     <- delta
-    HR_target_CR <- m_ref_CR / (m_ref_CR + delta_CR)
-
-    power_pairs_CR <- power_for_pairs_target_HR(
-      df            = data,
-      comparisons   = comparisons[i],
-      response_level = "CR",
-      HR_target     = HR_target_CR,
-      timevar       = "censor_time_PFS",
-      statusvar     = "censor_status_PFS",
-      alpha         = 0.05
-    )
-    
-    power_pairs_CR_ls[[i]] <- power_pairs_CR 
-  }
-  power_CR <- do.call(rbind, power_pairs_CR_ls)
-  power_CR$group <- "Unmatched CR"
-  power_CR$delta <- delta
-  
-  ## ---------- PR: unmatched ----------
-  power_pairs_PR_ls <- list()
-  for (i in seq_along(comparisons)) {
-    data <- subset(dataDF, Tumor %in% unlist(comparisons[i]))
-    
-    fit_PR <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1,
-                      data = data)
-    m_ref_PR     <- as.numeric(summary(fit_PR)$table["median"])
-    delta_PR     <- delta
-    HR_target_PR <- m_ref_PR / (m_ref_PR + delta_PR)
-
-    power_pairs_PR <- power_for_pairs_target_HR(
-      df            = data,
-      comparisons   = comparisons[i],
-      response_level = "PR",
-      HR_target     = HR_target_PR,
-      timevar       = "censor_time_PFS",
-      statusvar     = "censor_status_PFS",
-      alpha         = 0.05
-    )
-    
-    power_pairs_PR_ls[[i]] <- power_pairs_PR 
-  }
-  power_PR <- do.call(rbind, power_pairs_PR_ls)
-  power_PR$group <- "Unmatched PR"
-  power_PR$delta <- delta
-  
+  # ## ---------- CR: unmatched ----------
+  # power_pairs_CR_ls <- list()
+  # for (i in seq_along(comparisons)) {
+  #   data <- subset(dataDF, Tumor %in% unlist(comparisons[i]))
+  #   
+  #   fit_CR <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1,
+  #                     data = data)
+  #   m_ref_CR     <- as.numeric(summary(fit_CR)$table["median"])
+  #   delta_CR     <- delta
+  #   HR_target_CR <- m_ref_CR / (m_ref_CR + delta_CR)
+  # 
+  #   power_pairs_CR <- power_for_pairs_target_HR(
+  #     df            = data,
+  #     comparisons   = comparisons[i],
+  #     response_level = "CR",
+  #     HR_target     = HR_target_CR,
+  #     timevar       = "censor_time_PFS",
+  #     statusvar     = "censor_status_PFS",
+  #     alpha         = 0.05
+  #   )
+  #   
+  #   power_pairs_CR_ls[[i]] <- power_pairs_CR 
+  # }
+  # power_CR <- do.call(rbind, power_pairs_CR_ls)
+  # power_CR$group <- "Unmatched CR"
+  # power_CR$delta <- delta
+  # 
+  # ## ---------- PR: unmatched ----------
+  # power_pairs_PR_ls <- list()
+  # for (i in seq_along(comparisons)) {
+  #   data <- subset(dataDF, Tumor %in% unlist(comparisons[i]))
+  #   
+  #   fit_PR <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1,
+  #                     data = data)
+  #   m_ref_PR     <- as.numeric(summary(fit_PR)$table["median"])
+  #   delta_PR     <- delta
+  #   HR_target_PR <- m_ref_PR / (m_ref_PR + delta_PR)
+  # 
+  #   power_pairs_PR <- power_for_pairs_target_HR(
+  #     df            = data,
+  #     comparisons   = comparisons[i],
+  #     response_level = "PR",
+  #     HR_target     = HR_target_PR,
+  #     timevar       = "censor_time_PFS",
+  #     statusvar     = "censor_status_PFS",
+  #     alpha         = 0.05
+  #   )
+  #   
+  #   power_pairs_PR_ls[[i]] <- power_pairs_PR 
+  # }
+  # power_PR <- do.call(rbind, power_pairs_PR_ls)
+  # power_PR$group <- "Unmatched PR"
+  # power_PR$delta <- delta
+  # 
   ## ---------- PSM: all patients (no DOR restriction) ----------
   power_pairs_psm_ls <- list()
   for (i in seq_along(comparisons)) {
@@ -1433,7 +1433,7 @@ for (delta in deltas) {
   
   ## ---------- bind for this delta ----------
   power_all_delta_ls[[as.character(delta)]] <- 
-    rbind(power_CR, power_PR, power_psm)
+    rbind(power_psm) #removed power_CR, power_PR, 
 }
 
 # Final long table with all deltas
@@ -1475,6 +1475,12 @@ ggplot(power_table_heat_plot,
     axis.text.y     = element_text(size = 12),
     legend.position = "right"
   )
+
+rownames(power_table_heat) <- NULL
+print(power_table_heat)
+
+cat("Power for:\n")
+cat(paste0(power_table_heat$comparison, " with ", power_table_heat$delta, " months difference is ", round(power_table_heat$power,digits = 3), "\n"))
 
 ```
 
