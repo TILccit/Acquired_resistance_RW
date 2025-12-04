@@ -1,7 +1,7 @@
 Survival analysis renal
 ================
 Mario Presti
-First created on Feb 2025. Updated on 25 November 2025
+First created on Feb 2025. Updated on 04 December 2025
 
 - [Introduction](#introduction)
 - [Loading Libraries](#loading-libraries)
@@ -18,11 +18,11 @@ First created on Feb 2025. Updated on 25 November 2025
   - [All responders - PFS](#all-responders---pfs)
 - [Combined Univariable vs Multivariable Forest Plots -
   PFS](#combined-univariable-vs-multivariable-forest-plots---pfs)
-- [RSS analysis](#rss-analysis)
+- [DSS analysis](#dss-analysis)
   - [Multivariate Survival Analysis - only complete
     cases](#multivariate-survival-analysis---only-complete-cases-1)
 - [Combined Univariable vs Multivariable Forest Plots -
-  RSS](#combined-univariable-vs-multivariable-forest-plots---rss)
+  DSS](#combined-univariable-vs-multivariable-forest-plots---dss)
 - [Five-Year Survival Estimates by
   Response](#five-year-survival-estimates-by-response)
 
@@ -307,7 +307,7 @@ dataDF$censor_status_OS <- ifelse(dataDF$OS_days/30 > 60, 0, dataDF$Dead)
 dataDF$censor_time_PFS   <- pmin(dataDF$PFS_days/30, 60)
 dataDF$censor_status_PFS <- ifelse(dataDF$PFS_days/30 > 60, 0, dataDF$Progressed)
 #Administrative censoring at 60 months
-dataDF$censor_status_RSS <- ifelse(dataDF$OS_days/30 > 60, 0, dataDF$Dead_RCC)
+dataDF$censor_status_DSS <- ifelse(dataDF$OS_days/30 > 60, 0, dataDF$Dead_RCC)
 ```
 
 ``` r
@@ -2152,13 +2152,13 @@ saveWorkbook(
 )
 ```
 
-# RSS analysis
+# DSS analysis
 
 \##Multiple Univariate analysis - Including missing data
 
 ``` r
 surv_time <- "censor_time_OS"
-surv_status <- "censor_status_RSS"
+surv_status <- "censor_status_DSS"
 surv_time_label <- "OS"
 # Find the best reference for each feature
 best_refs <- character(length(features))
@@ -2247,7 +2247,7 @@ forest_plot(multiple_uni,
 
     ## `height` was translated to `width`.
 
-![](Survival_analysis_renal_files/figure-gfm/Multiple%20Univariate%20analysis%20-%20Including%20missing%20data%20RSS-1.png)<!-- -->
+![](Survival_analysis_renal_files/figure-gfm/Multiple%20Univariate%20analysis%20-%20Including%20missing%20data%20DSS-1.png)<!-- -->
 
 ``` r
 #save this for the comparison at the end with the 18 month landmark
@@ -2391,15 +2391,15 @@ forest_model_sign <- forest_model(cox_model_sign,  # Set x-axis limits
 print(forest_model_all)
 ```
 
-![](Survival_analysis_renal_files/figure-gfm/Multivariate%20Survival%20Analysis%20-%20only%20complete%20cases%20RSS-1.png)<!-- -->
+![](Survival_analysis_renal_files/figure-gfm/Multivariate%20Survival%20Analysis%20-%20only%20complete%20cases%20DSS-1.png)<!-- -->
 
 ``` r
 print(forest_model_sign)
 ```
 
-![](Survival_analysis_renal_files/figure-gfm/Multivariate%20Survival%20Analysis%20-%20only%20complete%20cases%20RSS-2.png)<!-- -->
+![](Survival_analysis_renal_files/figure-gfm/Multivariate%20Survival%20Analysis%20-%20only%20complete%20cases%20DSS-2.png)<!-- -->
 
-# Combined Univariable vs Multivariable Forest Plots - RSS
+# Combined Univariable vs Multivariable Forest Plots - DSS
 
 ``` r
 # Prepare empty list to collect rows
@@ -3053,9 +3053,11 @@ results <- lapply(responses, function(resp) {
   d <- filter(dataDF, `Objective response` == resp)
   fit_OS  <- survfit(Surv(censor_time_OS,  censor_status_OS)  ~ 1, data = d)
   fit_PFS <- survfit(Surv(censor_time_PFS, censor_status_PFS) ~ 1, data = d)
+  fit_DSS <- survfit(Surv(censor_time_OS, censor_status_DSS) ~ 1, data = d)
 
   os_ci  <- get5yr_ci(fit_OS)
   pfs_ci <- get5yr_ci(fit_PFS)
+  DSS_ci <- get5yr_ci(fit_DSS)
 
   data.frame(
     Response       = resp,
@@ -3064,7 +3066,10 @@ results <- lapply(responses, function(resp) {
     OS_5yr_Upper   = os_ci$Upper95,
     PFS_5yr        = pfs_ci$Estimate,
     PFS_5yr_Lower  = pfs_ci$Lower95,
-    PFS_5yr_Upper  = pfs_ci$Upper95
+    PFS_5yr_Upper  = pfs_ci$Upper95,
+    DSS_5yr        = DSS_ci$Estimate,
+    DSS_5yr_Lower  = DSS_ci$Lower95,
+    DSS_5yr_Upper  = DSS_ci$Upper95
   )
 })
 
@@ -3072,16 +3077,20 @@ five_year_table <- bind_rows(results) %>%
   mutate(across(matches("_5yr"), ~ . * 100, .names = "{.col}_pct")) %>%
   select(Response,
          OS_5yr_pct, OS_5yr_Lower_pct, OS_5yr_Upper_pct,
-         PFS_5yr_pct, PFS_5yr_Lower_pct, PFS_5yr_Upper_pct)
+         PFS_5yr_pct, PFS_5yr_Lower_pct, PFS_5yr_Upper_pct,
+         DSS_5yr_pct,DSS_5yr_Lower_pct,DSS_5yr_Upper_pct)
 print(five_year_table)
 ```
 
     ##   Response OS_5yr_pct OS_5yr_Lower_pct OS_5yr_Upper_pct PFS_5yr_pct
     ## 1       CR   95.46956         90.55291         100.0000    68.38697
     ## 2       PR   52.46009         44.60644          61.6965    23.70498
-    ##   PFS_5yr_Lower_pct PFS_5yr_Upper_pct
-    ## 1          57.54669          81.26927
-    ## 2          17.83307          31.51035
+    ##   PFS_5yr_Lower_pct PFS_5yr_Upper_pct DSS_5yr_pct DSS_5yr_Lower_pct
+    ## 1          57.54669          81.26927    98.73418          96.29948
+    ## 2          17.83307          31.51035    53.91041          45.94415
+    ##   DSS_5yr_Upper_pct
+    ## 1         100.00000
+    ## 2          63.25794
 
 ``` r
 # pull out labels from five_year_table
@@ -3098,6 +3107,12 @@ pfs_lbls <- five_year_table %>%
     Response,
     pfs_lbls = sprintf("%s: %.0f%% (%.0f–%.0f%%)",
                         Response, PFS_5yr_pct, PFS_5yr_Lower_pct, PFS_5yr_Upper_pct))
+
+dss_lbls <- five_year_table %>%
+  transmute(
+    Response,
+    dss_lbls = sprintf("%s: %.0f%% (%.0f–%.0f%%)",
+                        Response, DSS_5yr_pct, DSS_5yr_Lower_pct, DSS_5yr_Upper_pct))
 
 #adding a syntactically correct name for OR, as it was failing in the Survfit step
 dataDF$Objective_response = dataDF$`Objective response`
@@ -3166,7 +3181,7 @@ p_os <- ggsurvfit(fit_OS, size = 1.5) +
     ## Adding another scale for x, which will replace the existing scale.
 
 ``` r
-# PFS plot
+# DSS plot
 ypos <- c(CR = five_year_table$PFS_5yr_pct[1], PR = five_year_table$PFS_5yr_pct[2])
 
 fit_PFS <- survfit(
@@ -3223,6 +3238,63 @@ p_pfs <- ggsurvfit(fit_PFS, size = 1.5) +
     ## Adding another scale for x, which will replace the existing scale.
 
 ``` r
+# DSS plot
+ypos <- c(CR = five_year_table$DSS_5yr_pct[1], PR = five_year_table$DSS_5yr_pct[2])
+
+fit_DSS <- survfit(
+  Surv(censor_time_OS, censor_status_DSS) ~ Objective_response,
+  data = dataDF
+)
+names(fit_DSS$strata) <- gsub("Objective_response=", "", names(fit_DSS$strata))
+
+p_dss <- ggsurvfit(fit_DSS, size = 1.5) +
+    add_censor_mark() +
+    add_confidence_interval()+
+    scale_ggsurvfit() +
+    add_risktable(
+      size            = 7,
+      theme           = theme_risktable_default(axis.text.y.size = 10,
+                                                 plot.title.size  = 20),
+      risktable_stats = "{n.risk}",  # ({cum.event}) removed because of space
+      stats_label = "Number at risk"
+    ) +
+    add_risktable_strata_symbol(symbol = "•", size = 20)+
+    labs(
+      x        = "Months after treatment initiation",
+      y        = "DSS (%)",
+      title = "RCC - Disease-specific Survival"
+    ) +
+    scale_x_continuous(breaks = seq(0, x_max, by = 12), limits = c(0, x_max)) +
+    theme_classic() +
+    theme(
+      plot.title      = element_text(hjust = 0.5, size = 25),
+      axis.title.x    = element_text(size = 20),
+      axis.title.y    = element_text(size = 20, margin = margin(t = 0, r = 0, b = 0, l = 0)),
+      axis.text.x     = element_text(size = 15),
+      axis.text.y     = element_text(size = 15),
+      legend.position = "bottom",
+      legend.direction= "horizontal",
+      legend.text     = element_text(size = 18),
+      legend.key.size = unit(10, "bigpts"),
+      legend.title    = element_blank(),
+      plot.margin = unit(c(0,0.2,0,1), 'lines')
+    ) +
+    scale_color_manual(name=c("CR", "PR"),values = c("CR"="#619CFF", "PR"="#F564E3")) +
+    scale_fill_manual(name=c("CR", "PR"),values = c("CR"="#619CFF", "PR"="#F564E3")) +
+   annotate(
+    "text",
+    x     = x_max*0.25,
+    y     = ypos[names(ypos)]*0.9/100,
+    label = paste0("5 year DSS for ",dss_lbls$dss_lbls),
+    size  = 10,
+    hjust = 0
+    )
+```
+
+    ## Scale for x is already present.
+    ## Adding another scale for x, which will replace the existing scale.
+
+``` r
 p_pfs
 ```
 
@@ -3233,3 +3305,9 @@ p_os
 ```
 
 ![](Survival_analysis_renal_files/figure-gfm/-%205%20year%20KM%20curves-2.png)<!-- -->
+
+``` r
+p_dss
+```
+
+![](Survival_analysis_renal_files/figure-gfm/-%205%20year%20KM%20curves-3.png)<!-- -->
