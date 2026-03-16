@@ -485,6 +485,74 @@ results_df %>%
   # add vertical lines right of col 3 and col 6
   column_spec(3, border_right = TRUE) %>%
   column_spec(6, border_right = TRUE)
+
+wb <- createWorkbook()
+addWorksheet(wb, "Supp_Table_Cox")
+
+# Write data
+writeData(wb, sheet = "Supp_Table_Cox", x = results_df, startRow = 1, startCol = 1)
+
+# Compute dimensions
+n_rows <- nrow(results_df) + 1  # +1 for header
+n_cols <- ncol(results_df)
+
+# Define styles
+headerStyle <- createStyle(
+  fontSize        = 12,
+  textDecoration  = "bold",
+  halign          = "center",
+  border          = "bottom",
+  borderStyle     = "medium"
+)
+evenRowStyle <- createStyle(fgFill = "#F2F2F2")
+sepBorderStyle <- createStyle(border = "right", borderStyle = "thin")
+
+# 5) Apply alternating shading
+dataRows <- 2:n_rows
+evenRows <- dataRows[seq(1, length(dataRows), by = 2)]
+
+# 6) Add vertical separators after col 3 and 6
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = sepBorderStyle,
+  rows  = 1:n_rows,
+  cols  = 3,
+  gridExpand = TRUE
+)
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = sepBorderStyle,
+  rows  = 1:n_rows,
+  cols  = 6,
+  gridExpand = TRUE
+)
+
+#alternate shading
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = evenRowStyle,
+  rows  = evenRows,
+  cols  = 1:n_cols,
+  gridExpand = TRUE
+)
+
+# Apply header style
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = headerStyle,
+  rows  = 1, cols = 1:n_cols,
+  gridExpand = TRUE
+)
+
+# 7) Autofit column widths & freeze header
+setColWidths(wb, "Supp_Table_Cox", cols = 1:n_cols, widths = "auto")
+freezePane(wb, "Supp_Table_Cox", firstRow = TRUE)
+
+saveWorkbook(
+  wb,
+  file = "E:/PhD_projects/Realworld/Scripts/Acquired_resistance_RW/Tables/Supplementary_Table_OS_MM.xlsx",
+  overwrite = TRUE
+)
 ```
 
 
@@ -1074,6 +1142,74 @@ results_df %>%
   # add vertical lines right of col 3 and col 6
   column_spec(3, border_right = TRUE) %>%
   column_spec(6, border_right = TRUE)
+
+wb <- createWorkbook()
+addWorksheet(wb, "Supp_Table_Cox")
+
+# Write data
+writeData(wb, sheet = "Supp_Table_Cox", x = results_df, startRow = 1, startCol = 1)
+
+# Compute dimensions
+n_rows <- nrow(results_df) + 1  # +1 for header
+n_cols <- ncol(results_df)
+
+# Define styles
+headerStyle <- createStyle(
+  fontSize        = 12,
+  textDecoration  = "bold",
+  halign          = "center",
+  border          = "bottom",
+  borderStyle     = "medium"
+)
+evenRowStyle <- createStyle(fgFill = "#F2F2F2")
+sepBorderStyle <- createStyle(border = "right", borderStyle = "thin")
+
+# 5) Apply alternating shading
+dataRows <- 2:n_rows
+evenRows <- dataRows[seq(1, length(dataRows), by = 2)]
+
+# 6) Add vertical separators after col 3 and 6
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = sepBorderStyle,
+  rows  = 1:n_rows,
+  cols  = 3,
+  gridExpand = TRUE
+)
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = sepBorderStyle,
+  rows  = 1:n_rows,
+  cols  = 6,
+  gridExpand = TRUE
+)
+
+#alternate shading
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = evenRowStyle,
+  rows  = evenRows,
+  cols  = 1:n_cols,
+  gridExpand = TRUE
+)
+
+# Apply header style
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = headerStyle,
+  rows  = 1, cols = 1:n_cols,
+  gridExpand = TRUE
+)
+
+# 7) Autofit column widths & freeze header
+setColWidths(wb, "Supp_Table_Cox", cols = 1:n_cols, widths = "auto")
+freezePane(wb, "Supp_Table_Cox", firstRow = TRUE)
+
+saveWorkbook(
+  wb,
+  file = "E:/PhD_projects/Realworld/Scripts/Acquired_resistance_RW/Tables/Supplementary_Table_MSS_MM.xlsx",
+  overwrite = TRUE
+)
 ```
 
 

@@ -47,9 +47,9 @@ run_survival_comparisons <- function(dataDF,
     
     # apply administrative censoring if requested
     if (!is.null(truncate_month)) {
-      orig_t <- df_sub[["OS_months"]]
-      df_sub[["OS_months"]]   <- pmin(orig_t, truncate_month)
-      df_sub[["Dead"]] <- ifelse(orig_t > truncate_month, 0, df_sub[["Dead"]])
+      orig_t <- df_sub[[timevar]]
+      df_sub[[timevar]]   <- pmin(orig_t, truncate_month)
+      df_sub[[statusvar]] <- ifelse(orig_t > truncate_month, 0, df_sub[["Dead"]])
     }
 
     # fit KM + Cox
