@@ -1,7 +1,7 @@
 Survival analysis renal
 ================
 Mario Presti
-First created on Feb 2025. Updated on 04 December 2025
+First created on Feb 2025. Updated on 16 March 2026
 
 - [Introduction](#introduction)
 - [Loading Libraries](#loading-libraries)
@@ -711,7 +711,7 @@ results_df %>%
   column_spec(6, border_right = TRUE)
 ```
 
-<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
 
 <caption>
 
@@ -1216,6 +1216,77 @@ CR
 </tbody>
 
 </table>
+
+``` r
+wb <- createWorkbook()
+addWorksheet(wb, "Supp_Table_Cox")
+
+# Write data
+writeData(wb, sheet = "Supp_Table_Cox", x = results_df, startRow = 1, startCol = 1)
+
+# Compute dimensions
+n_rows <- nrow(results_df) + 1  # +1 for header
+n_cols <- ncol(results_df)
+
+# Define styles
+headerStyle <- createStyle(
+  fontSize        = 12,
+  textDecoration  = "bold",
+  halign          = "center",
+  border          = "bottom",
+  borderStyle     = "medium"
+)
+evenRowStyle <- createStyle(fgFill = "#F2F2F2")
+sepBorderStyle <- createStyle(border = "right", borderStyle = "thin")
+
+# Apply alternating shading
+dataRows <- 2:n_rows
+evenRows <- dataRows[seq(1, length(dataRows), by = 2)]
+
+# Add vertical separators after col 3 and 6
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = sepBorderStyle,
+  rows  = 1:n_rows,
+  cols  = 3,
+  gridExpand = TRUE
+)
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = sepBorderStyle,
+  rows  = 1:n_rows,
+  cols  = 6,
+  gridExpand = TRUE
+)
+
+#alternate shading
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = evenRowStyle,
+  rows  = evenRows,
+  cols  = 1:n_cols,
+  gridExpand = TRUE
+)
+
+# Apply header style
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = headerStyle,
+  rows  = 1, cols = 1:n_cols,
+  gridExpand = TRUE
+)
+
+# 7) Autofit column widths & freeze header
+setColWidths(wb, "Supp_Table_Cox", cols = 1:n_cols, widths = "auto")
+freezePane(wb, "Supp_Table_Cox", firstRow = TRUE)
+
+# 8) Save file
+saveWorkbook(
+  wb,
+  file = "E:/PhD_projects/Realworld/Scripts/Acquired_resistance_RW/Tables/Supplementary_Table_OS_RCC.xlsx",
+  overwrite = TRUE
+)
+```
 
 # PFS analysis
 
@@ -2515,7 +2586,7 @@ results_df %>%
   column_spec(6, border_right = TRUE)
 ```
 
-<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
 
 <caption>
 
@@ -3019,6 +3090,77 @@ CR
 
 </table>
 
+``` r
+wb <- createWorkbook()
+addWorksheet(wb, "Supp_Table_Cox")
+
+# Write data
+writeData(wb, sheet = "Supp_Table_Cox", x = results_df, startRow = 1, startCol = 1)
+
+# Compute dimensions
+n_rows <- nrow(results_df) + 1  # +1 for header
+n_cols <- ncol(results_df)
+
+# Define styles
+headerStyle <- createStyle(
+  fontSize        = 12,
+  textDecoration  = "bold",
+  halign          = "center",
+  border          = "bottom",
+  borderStyle     = "medium"
+)
+evenRowStyle <- createStyle(fgFill = "#F2F2F2")
+sepBorderStyle <- createStyle(border = "right", borderStyle = "thin")
+
+# Apply alternating shading
+dataRows <- 2:n_rows
+evenRows <- dataRows[seq(1, length(dataRows), by = 2)]
+
+# Add vertical separators after col 3 and 6
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = sepBorderStyle,
+  rows  = 1:n_rows,
+  cols  = 3,
+  gridExpand = TRUE
+)
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = sepBorderStyle,
+  rows  = 1:n_rows,
+  cols  = 6,
+  gridExpand = TRUE
+)
+
+#alternate shading
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = evenRowStyle,
+  rows  = evenRows,
+  cols  = 1:n_cols,
+  gridExpand = TRUE
+)
+
+# Apply header style
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = headerStyle,
+  rows  = 1, cols = 1:n_cols,
+  gridExpand = TRUE
+)
+
+# 7) Autofit column widths & freeze header
+setColWidths(wb, "Supp_Table_Cox", cols = 1:n_cols, widths = "auto")
+freezePane(wb, "Supp_Table_Cox", firstRow = TRUE)
+
+# 8) Save file
+saveWorkbook(
+  wb,
+  file = "E:/PhD_projects/Realworld/Scripts/Acquired_resistance_RW/Tables/Supplementary_Table_DSS_RCC.xlsx",
+  overwrite = TRUE
+)
+```
+
 # Five-Year Survival Estimates by Response
 
 ``` r
@@ -3139,7 +3281,7 @@ p_os <- ggsurvfit(fit_OS, size = 1.5) +
     add_risktable_strata_symbol(symbol = "•", size = 20)+
     labs(
       x        = "Months after treatment initiation",
-      y        = "PFS (%)",
+      y        = "OS (%)",
       title = "RCC - Overall Survival"
     ) +
     scale_x_continuous(breaks = seq(0, x_max, by = 12), limits = c(0, x_max)) +

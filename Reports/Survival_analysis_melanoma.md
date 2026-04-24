@@ -1,7 +1,7 @@
 Survival analysis melanoma
 ================
 Mario Presti
-First created on Feb 2025. Updated on 28 November 2025
+First created on Feb 2025. Updated on 24 April 2026
 
 - [Introduction](#introduction)
 - [Loading Libraries](#loading-libraries)
@@ -19,6 +19,8 @@ First created on Feb 2025. Updated on 28 November 2025
     DSS](#numeric-table-with-5-year-os-pfs-dss)
 - [Five-Year Survival Estimates by
   Response](#five-year-survival-estimates-by-response)
+  - [5 year KM of the whole melanoma
+    cohort](#5-year-km-of-the-whole-melanoma-cohort)
   - [18 Month landmark analysis](#18-month-landmark-analysis)
 
 # Introduction
@@ -711,7 +713,7 @@ results_df %>%
   column_spec(6, border_right = TRUE)
 ```
 
-<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
 
 <caption>
 
@@ -1404,6 +1406,76 @@ CR
 
 </table>
 
+``` r
+wb <- createWorkbook()
+addWorksheet(wb, "Supp_Table_Cox")
+
+# Write data
+writeData(wb, sheet = "Supp_Table_Cox", x = results_df, startRow = 1, startCol = 1)
+
+# Compute dimensions
+n_rows <- nrow(results_df) + 1  # +1 for header
+n_cols <- ncol(results_df)
+
+# Define styles
+headerStyle <- createStyle(
+  fontSize        = 12,
+  textDecoration  = "bold",
+  halign          = "center",
+  border          = "bottom",
+  borderStyle     = "medium"
+)
+evenRowStyle <- createStyle(fgFill = "#F2F2F2")
+sepBorderStyle <- createStyle(border = "right", borderStyle = "thin")
+
+# 5) Apply alternating shading
+dataRows <- 2:n_rows
+evenRows <- dataRows[seq(1, length(dataRows), by = 2)]
+
+# 6) Add vertical separators after col 3 and 6
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = sepBorderStyle,
+  rows  = 1:n_rows,
+  cols  = 3,
+  gridExpand = TRUE
+)
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = sepBorderStyle,
+  rows  = 1:n_rows,
+  cols  = 6,
+  gridExpand = TRUE
+)
+
+#alternate shading
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = evenRowStyle,
+  rows  = evenRows,
+  cols  = 1:n_cols,
+  gridExpand = TRUE
+)
+
+# Apply header style
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = headerStyle,
+  rows  = 1, cols = 1:n_cols,
+  gridExpand = TRUE
+)
+
+# 7) Autofit column widths & freeze header
+setColWidths(wb, "Supp_Table_Cox", cols = 1:n_cols, widths = "auto")
+freezePane(wb, "Supp_Table_Cox", firstRow = TRUE)
+
+saveWorkbook(
+  wb,
+  file = "E:/PhD_projects/Realworld/Scripts/Acquired_resistance_RW/Tables/Supplementary_Table_OS_MM.xlsx",
+  overwrite = TRUE
+)
+```
+
 # PFS analysis
 
 ``` r
@@ -1797,7 +1869,7 @@ results_df %>%
   column_spec(6, border_right = TRUE)
 ```
 
-<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
 
 <caption>
 
@@ -2927,7 +2999,7 @@ results_df %>%
   column_spec(6, border_right = TRUE)
 ```
 
-<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
 
 <caption>
 
@@ -3617,6 +3689,76 @@ CR
 
 </table>
 
+``` r
+wb <- createWorkbook()
+addWorksheet(wb, "Supp_Table_Cox")
+
+# Write data
+writeData(wb, sheet = "Supp_Table_Cox", x = results_df, startRow = 1, startCol = 1)
+
+# Compute dimensions
+n_rows <- nrow(results_df) + 1  # +1 for header
+n_cols <- ncol(results_df)
+
+# Define styles
+headerStyle <- createStyle(
+  fontSize        = 12,
+  textDecoration  = "bold",
+  halign          = "center",
+  border          = "bottom",
+  borderStyle     = "medium"
+)
+evenRowStyle <- createStyle(fgFill = "#F2F2F2")
+sepBorderStyle <- createStyle(border = "right", borderStyle = "thin")
+
+# 5) Apply alternating shading
+dataRows <- 2:n_rows
+evenRows <- dataRows[seq(1, length(dataRows), by = 2)]
+
+# 6) Add vertical separators after col 3 and 6
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = sepBorderStyle,
+  rows  = 1:n_rows,
+  cols  = 3,
+  gridExpand = TRUE
+)
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = sepBorderStyle,
+  rows  = 1:n_rows,
+  cols  = 6,
+  gridExpand = TRUE
+)
+
+#alternate shading
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = evenRowStyle,
+  rows  = evenRows,
+  cols  = 1:n_cols,
+  gridExpand = TRUE
+)
+
+# Apply header style
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = headerStyle,
+  rows  = 1, cols = 1:n_cols,
+  gridExpand = TRUE
+)
+
+# 7) Autofit column widths & freeze header
+setColWidths(wb, "Supp_Table_Cox", cols = 1:n_cols, widths = "auto")
+freezePane(wb, "Supp_Table_Cox", firstRow = TRUE)
+
+saveWorkbook(
+  wb,
+  file = "E:/PhD_projects/Realworld/Scripts/Acquired_resistance_RW/Tables/Supplementary_Table_MSS_MM.xlsx",
+  overwrite = TRUE
+)
+```
+
 ## Numeric table with 5-year OS, PFS, DSS
 
 # Five-Year Survival Estimates by Response
@@ -3775,7 +3917,7 @@ p_os <- ggsurvfit(fit_OS, size = 1.5) +
     ## ℹ Please use `linewidth` instead.
     ## ℹ The deprecated feature was likely used in the ggsurvfit package.
     ##   Please report the issue at <https://github.com/pharmaverse/ggsurvfit/issues>.
-    ## This warning is displayed once every 8 hours.
+    ## This warning is displayed once per session.
     ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
     ## generated.
 
@@ -3913,6 +4055,203 @@ p_DSS
 ```
 
 ![](Survival_analysis_melanoma_files/figure-gfm/-%205%20year%20KM%20curves-3.png)<!-- -->
+
+## 5 year KM of the whole melanoma cohort
+
+``` r
+# OS plot
+fit_OS <- survfit(
+  Surv(censor_time_OS, censor_status_OS) ~ 1,
+  data = dataDF
+)
+os_5y <- summary(fit_OS, times = 60)$surv * 100
+
+os_5y_label <- paste0("5-year OS: ", round(os_5y, 1), "%")
+
+
+p_os <- ggsurvfit(fit_OS, size = 1.5, color = "black") +
+  add_confidence_interval(fill = "#00BA38", alpha = 0.2)+
+    add_censor_mark() +
+    scale_ggsurvfit() +
+    add_risktable(
+      size            = 7,
+      theme           = theme_risktable_default(axis.text.y.size = 10,
+                                                 plot.title.size  = 20),
+      risktable_stats = "{n.risk}",  # ({cum.event}) removed because of space
+      stats_label = "Number at risk"
+    ) +
+    labs(
+      x        = "Months after treatment initiation",
+      y        = "OS (%)",
+      title = "Melanoma - Overall Survival"
+    ) +
+    scale_x_continuous(breaks = seq(0, x_max, by = 12), limits = c(0, x_max)) +
+    theme_classic() +
+    theme(
+      plot.title      = element_text(hjust = 0.5, size = 25),
+      axis.title.x    = element_text(size = 20),
+      axis.title.y    = element_text(size = 20, margin = margin(t = 0, r = 0, b = 0, l = 0)),
+      axis.text.x     = element_text(size = 15),
+      axis.text.y     = element_text(size = 15),
+      legend.position = "bottom",
+      legend.direction= "horizontal",
+      legend.text     = element_text(size = 18),
+      legend.key.size = unit(10, "bigpts"),
+      legend.title    = element_blank(),
+      plot.margin = unit(c(0,0.2,0,1), 'lines')
+    ) +
+annotate(
+  "text",
+  x = x_max * 0.25,
+  y = 0.65,
+  label = os_5y_label,
+  size = 10,
+  hjust = 0
+)
+```
+
+    ## Scale for x is already present.
+    ## Adding another scale for x, which will replace the existing scale.
+
+``` r
+# PFS plot
+fit_PFS <- survfit(
+  Surv(censor_time_PFS, censor_status_PFS) ~ 1,
+  data = dataDF
+)
+
+pfs_5y <- summary(fit_PFS, times = 60)$surv * 100
+
+pfs_5y_label <- paste0("5-year PFS: ", round(pfs_5y, 1), "%")
+
+
+p_pfs <- ggsurvfit(fit_PFS, size = 1.5, color = "black") +
+  add_confidence_interval(fill = "#00BA38", alpha = 0.2) +
+    add_censor_mark() +
+    add_confidence_interval()+
+    scale_ggsurvfit() +
+    add_risktable(
+      size            = 7,
+      theme           = theme_risktable_default(axis.text.y.size = 10,
+                                                 plot.title.size  = 20),
+      risktable_stats = "{n.risk}",  # ({cum.event}) removed because of space
+      stats_label = "Number at risk"
+    ) +
+    add_risktable_strata_symbol(symbol = "•", size = 20)+
+    labs(
+      x        = "Months after treatment initiation",
+      y        = "PFS (%)",
+      title = "Melanoma - Progression-free Survival"
+    ) +
+    scale_x_continuous(breaks = seq(0, x_max, by = 12), limits = c(0, x_max)) +
+    theme_classic() +
+    theme(
+      plot.title      = element_text(hjust = 0.5, size = 25),
+      axis.title.x    = element_text(size = 20),
+      axis.title.y    = element_text(size = 20, margin = margin(t = 0, r = 0, b = 0, l = 0)),
+      axis.text.x     = element_text(size = 15),
+      axis.text.y     = element_text(size = 15),
+      legend.position = "bottom",
+      legend.direction= "horizontal",
+      legend.text     = element_text(size = 18),
+      legend.key.size = unit(10, "bigpts"),
+      legend.title    = element_blank(),
+      plot.margin = unit(c(0,0.2,0,1), 'lines')
+    ) +
+  annotate(
+  "text",
+  x = x_max * 0.25,
+  y = 0.50,
+  label = pfs_5y_label,
+  size = 10,
+  hjust = 0
+)
+```
+
+    ## Scale for x is already present.
+    ## Adding another scale for x, which will replace the existing scale.
+
+``` r
+# DSS plot
+fit_DSS <- survfit(
+  Surv(censor_time_OS, censor_status_DSS) ~ 1,
+  data = dataDF
+)
+
+dss_5y <- summary(fit_DSS, times = 60)$surv * 100
+
+dss_5y_label <- paste0("5-year DSS: ", round(dss_5y, 1), "%")
+
+p_DSS <- ggsurvfit(fit_DSS, size = 1.5, color = "black") +
+  add_confidence_interval(fill = "#00BA38", alpha = 0.2) +
+    add_censor_mark() +
+    scale_ggsurvfit() +
+    add_risktable(
+      size            = 7,
+      theme           = theme_risktable_default(axis.text.y.size = 10,
+                                                 plot.title.size  = 20),
+      risktable_stats = "{n.risk}",  # ({cum.event}) removed because of space
+      stats_label = "Number at risk"
+    ) +
+    add_risktable_strata_symbol(symbol = "•", size = 20)+
+    labs(
+      x        = "Months after treatment initiation",
+      y        = "DSS (%)",
+      title = "Melanoma - Disease-specific Survival"
+    ) +
+    scale_x_continuous(breaks = seq(0, x_max, by = 12), limits = c(0, x_max)) +
+    theme_classic() +
+    theme(
+      plot.title      = element_text(hjust = 0.5, size = 25),
+      axis.title.x    = element_text(size = 20),
+      axis.title.y    = element_text(size = 20, margin = margin(t = 0, r = 0, b = 0, l = 0)),
+      axis.text.x     = element_text(size = 15),
+      axis.text.y     = element_text(size = 15),
+      legend.position = "bottom",
+      legend.direction= "horizontal",
+      legend.text     = element_text(size = 18),
+      legend.key.size = unit(10, "bigpts"),
+      legend.title    = element_blank(),
+      plot.margin = unit(c(0,0.2,0,1), 'lines')
+    ) +
+   annotate(
+  "text",
+  x = x_max * 0.25,
+  y = 0.70,
+  label = dss_5y_label,
+  size = 10,
+  hjust = 0
+)
+```
+
+    ## Scale for x is already present.
+    ## Adding another scale for x, which will replace the existing scale.
+
+``` r
+p_pfs
+```
+
+    ## ! Call to `add_risktable_strata_symbol()` has been ignored.
+    ## ℹ Use this function with `add_risktable(risktable_group='risktable_stats')`
+    ##   when stratum are present.
+
+![](Survival_analysis_melanoma_files/figure-gfm/-%205%20year%20KM%20curves%20whole%20cohort-1.png)<!-- -->
+
+``` r
+p_os
+```
+
+![](Survival_analysis_melanoma_files/figure-gfm/-%205%20year%20KM%20curves%20whole%20cohort-2.png)<!-- -->
+
+``` r
+p_DSS
+```
+
+    ## ! Call to `add_risktable_strata_symbol()` has been ignored.
+    ## ℹ Use this function with `add_risktable(risktable_group='risktable_stats')`
+    ##   when stratum are present.
+
+![](Survival_analysis_melanoma_files/figure-gfm/-%205%20year%20KM%20curves%20whole%20cohort-3.png)<!-- -->
 
 ## 18 Month landmark analysis
 

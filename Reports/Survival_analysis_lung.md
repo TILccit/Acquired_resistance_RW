@@ -1,7 +1,7 @@
 Survival analysis Lung
 ================
 Mario Presti
-First created on Feb 2025. Updated on 06 August 2025
+First created on Feb 2025. Updated on 16 March 2026
 
 - [Introduction](#introduction)
 - [Loading Libraries](#loading-libraries)
@@ -48,8 +48,6 @@ dim(dataDF)
     ## [1] 667  56
 
 ``` r
-# 264  49
-
 names(dataDF)[names(dataDF) == 'bedste_respons'] <- 'bor'
 #correct PDL1 column
 names(dataDF)[names(dataDF) == 'PD-L1_correct'] <- 'PDL1_correct'
@@ -395,6 +393,8 @@ forest_plot(multiple_uni,
     ## Please use `switch(typeof())` or `switch(my_typeof())` instead.
     ## This warning is displayed once every 8 hours.
 
+    ## `height` was translated to `width`.
+
 ![](Survival_analysis_lung_files/figure-gfm/Multiple%20Univariate%20analysis%20-%20Including%20missing%20data%20-%20OS-1.png)<!-- -->
 
 ``` r
@@ -615,7 +615,7 @@ results_df <- results_df %>%
 
 results_df <- results_df %>%
   group_by(Covariate) %>%
-  mutate(Covariate = ifelse(row_number() == 1, Covariate, "")) %>%
+  dplyr::mutate(Covariate = ifelse(row_number() == 1, Covariate, "")) %>%
   ungroup()
 
 n_cols <- ncol(results_df)
@@ -645,7 +645,7 @@ results_df %>%
   column_spec(6, border_right = TRUE)
 ```
 
-<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
 
 <caption>
 
@@ -1098,6 +1098,77 @@ CR
 
 </table>
 
+``` r
+wb <- createWorkbook()
+addWorksheet(wb, "Supp_Table_Cox")
+
+# Write data
+writeData(wb, sheet = "Supp_Table_Cox", x = results_df, startRow = 1, startCol = 1)
+
+# Compute dimensions
+n_rows <- nrow(results_df) + 1  # +1 for header
+n_cols <- ncol(results_df)
+
+# Define styles
+headerStyle <- createStyle(
+  fontSize        = 12,
+  textDecoration  = "bold",
+  halign          = "center",
+  border          = "bottom",
+  borderStyle     = "medium"
+)
+evenRowStyle <- createStyle(fgFill = "#F2F2F2")
+sepBorderStyle <- createStyle(border = "right", borderStyle = "thin")
+
+# 5) Apply alternating shading
+dataRows <- 2:n_rows
+evenRows <- dataRows[seq(1, length(dataRows), by = 2)]
+
+# 6) Add vertical separators after col 3 and 6
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = sepBorderStyle,
+  rows  = 1:n_rows,
+  cols  = 3,
+  gridExpand = TRUE
+)
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = sepBorderStyle,
+  rows  = 1:n_rows,
+  cols  = 6,
+  gridExpand = TRUE
+)
+
+#alternate shading
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = evenRowStyle,
+  rows  = evenRows,
+  cols  = 1:n_cols,
+  gridExpand = TRUE
+)
+
+# Apply header style
+addStyle(
+  wb, "Supp_Table_Cox",
+  style = headerStyle,
+  rows  = 1, cols = 1:n_cols,
+  gridExpand = TRUE
+)
+
+# 7) Autofit column widths & freeze header
+setColWidths(wb, "Supp_Table_Cox", cols = 1:n_cols, widths = "auto")
+freezePane(wb, "Supp_Table_Cox", firstRow = TRUE)
+
+# 8) Save file
+saveWorkbook(
+  wb,
+  file = "E:/PhD_projects/Realworld/Scripts/Acquired_resistance_RW/Tables/Supplementary_Table_OS_Lung.xlsx",
+  overwrite = TRUE
+)
+```
+
 # PFS analysis
 
 ``` r
@@ -1188,6 +1259,8 @@ forest_plot(multiple_uni,
             #p_lessthan_cutoff = 0.05
             )
 ```
+
+    ## `height` was translated to `width`.
 
 ![](Survival_analysis_lung_files/figure-gfm/Multiple%20Univariate%20analysis%20-%20Including%20missing%20data%20-%20PFS-1.png)<!-- -->
 
@@ -1450,7 +1523,7 @@ results_df %>%
   column_spec(6, border_right = TRUE)
 ```
 
-<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
 
 <caption>
 
@@ -2026,17 +2099,17 @@ results <- lapply(responses, function(resp) {
 five_year_table <- bind_rows(results) %>%
   mutate(across(matches("_5yr"), ~ . * 100, .names = "{.col}_pct")) %>%
   select(Response,
-         OS_5yr_pct, OS_5yr_Lower_pct, OS_5yr_Upper_pct,
-         PFS_5yr_pct, PFS_5yr_Lower_pct, PFS_5yr_Upper_pct)
+         OS_5yr, OS_5yr_Lower, OS_5yr_Upper,
+         PFS_5yr, PFS_5yr_Lower, PFS_5yr_Upper)
 print(five_year_table)
 ```
 
-    ##   Response OS_5yr_pct OS_5yr_Lower_pct OS_5yr_Upper_pct PFS_5yr_pct
-    ## 1       CR   74.90839         65.14914         86.12957    66.54732
-    ## 2       PR   39.94039         35.94781         44.37642    18.62724
-    ##   PFS_5yr_Lower_pct PFS_5yr_Upper_pct
-    ## 1          56.17685          78.83222
-    ## 2          15.55600          22.30483
+    ##   Response    OS_5yr OS_5yr_Lower OS_5yr_Upper   PFS_5yr PFS_5yr_Lower
+    ## 1       CR 0.7490839    0.6514914    0.8612957 0.6654732     0.5617685
+    ## 2       PR 0.3994039    0.3594781    0.4437642 0.1862724     0.1555600
+    ##   PFS_5yr_Upper
+    ## 1     0.7883222
+    ## 2     0.2230483
 
 ``` r
 # pull out labels from five_year_table
@@ -2045,19 +2118,31 @@ rownames(five_year_table) <- five_year_table$Response
 os_lbls <- five_year_table %>%
   transmute(
     Response,
-    os_lbls = sprintf("%s: %.0f%% (%.0f–%.0f%%)",
-                       Response, OS_5yr_pct, OS_5yr_Lower_pct, OS_5yr_Upper_pct))
+    os_lbls = sprintf(
+      "%s: %.0f%% (%.0f–%.0f%%)",
+      Response,
+      100 * OS_5yr,
+      100 * OS_5yr_Lower,
+      100 * OS_5yr_Upper
+    )
+  )
 
 pfs_lbls <- five_year_table %>%
   transmute(
     Response,
-    pfs_lbls = sprintf("%s: %.0f%% (%.0f–%.0f%%)",
-                        Response, PFS_5yr_pct, PFS_5yr_Lower_pct, PFS_5yr_Upper_pct))
+    pfs_lbls = sprintf(
+      "%s: %.0f%% (%.0f–%.0f%%)",
+      Response,
+      100 * PFS_5yr,
+      100 * PFS_5yr_Lower,
+      100 * PFS_5yr_Upper
+    )
+  )
 
 #adding a syntactically correct name for OR, as it was failing in the Survfit step
 dataDF$Objective_response = dataDF$`Objective response`
 
-ypos <- c(CR = five_year_table$OS_5yr_pct[1], PR = five_year_table$OS_5yr_pct[2])
+ypos <- c(CR = five_year_table$OS_5yr[1], PR = five_year_table$OS_5yr[2])
 
 fit_OS <- survfit(
   Surv(censor_time_OS, censor_status_OS) ~ Objective_response,
@@ -2079,7 +2164,7 @@ p_os <- ggsurvfit(fit_OS, size = 1.5) +
     add_risktable_strata_symbol(symbol = "•", size = 20, family = "Arial Unicode MS")+
     labs(
       x        = "Months after treatment initiation",
-      y        = "PFS (%)",
+      y        = "OS (%)",
       title = "NSCLC - Overall Survival"
     ) +
     scale_x_continuous(breaks = seq(0, x_max, by = 12), limits = c(0, x_max)) +
@@ -2102,19 +2187,27 @@ p_os <- ggsurvfit(fit_OS, size = 1.5) +
    annotate(
     "text",
     x     = x_max*0.25,
-    y     = ypos[names(ypos)]*0.9/100,
+    y     = ypos[names(ypos)]*90/100,
     label = paste0("5 year OS for ",os_lbls$os_lbls),
     size  = 10,
     hjust = 0
     )
 ```
 
+    ## Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+    ## ℹ Please use `linewidth` instead.
+    ## ℹ The deprecated feature was likely used in the ggsurvfit package.
+    ##   Please report the issue at <https://github.com/pharmaverse/ggsurvfit/issues>.
+    ## This warning is displayed once every 8 hours.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+    ## generated.
+
     ## Scale for x is already present.
     ## Adding another scale for x, which will replace the existing scale.
 
 ``` r
 # PFS plot
-ypos <- c(CR = five_year_table$PFS_5yr_pct[1], PR = five_year_table$PFS_5yr_pct[2])
+ypos <- c(CR = five_year_table$PFS_5yr[1], PR = five_year_table$PFS_5yr[2])
 
 fit_PFS <- survfit(
   Surv(censor_time_PFS, censor_status_PFS) ~ Objective_response,
@@ -2159,7 +2252,7 @@ p_pfs <- ggsurvfit(fit_PFS, size = 1.5) +
    annotate(
     "text",
     x     = x_max*0.25,
-    y     = ypos[names(ypos)]*0.9/100,
+    y     = ypos[names(ypos)]*90/100,
     label = paste0("5 year PFS for ",pfs_lbls$pfs_lbls),
     size  = 10,
     hjust = 0
