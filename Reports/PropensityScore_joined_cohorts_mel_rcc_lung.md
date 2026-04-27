@@ -1237,10 +1237,24 @@ print(paste0("PS matching with ratio: ",ratio," and the following formula:", pas
     ## [1] "PS matching with ratio: 2 and the following formula:Tumor ~`Sex` + `Age` + `Treatment line` + `ECOG Performance Status` + `DOR`"
 
 ``` r
-OS_psm_all$combined_surv_plot
+plot_title <- paste0("OS - PS matching with the full formula and ratio:", paste0(ratio), ":1")
+print(OS_psm_all$combined_surv_plot+
+      plot_annotation(title=plot_title,
+                      theme=theme(plot.title=element_text(size = 20, face = "bold", hjust = 0.5),
+                                  plot.subtitle = element_text(size = 15, hjust = 0.5))))
 ```
 
 ![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-1.png)<!-- -->
+
+``` r
+plot_title <- paste0("PFS - PS matching with the full formula and ratio:", paste0(ratio), ":1")
+print(PFS_psm_all$combined_surv_plot+
+      plot_annotation(title=plot_title,
+                      theme=theme(plot.title=element_text(size = 20, face = "bold", hjust = 0.5),
+                                  plot.subtitle = element_text(size = 15, hjust = 0.5))))
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-2.png)<!-- -->
 
 ``` r
 OS_psm_all$love_plots
@@ -1248,21 +1262,15 @@ OS_psm_all$love_plots
 
     ## $`Melanoma vs RCC`
 
-![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-2.png)<!-- -->
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-3.png)<!-- -->
 
     ## 
     ## $`Melanoma vs NSCLC`
 
-![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-3.png)<!-- -->
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-4.png)<!-- -->
 
     ## 
     ## $`RCC vs NSCLC`
-
-![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-4.png)<!-- -->
-
-``` r
-PFS_psm_all$combined_surv_plot
-```
 
 ![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-5.png)<!-- -->
 
@@ -1277,10 +1285,24 @@ print(paste0("PS matching with ratio: ",ratio," and the following formula:", pas
     ## [1] "PS matching with ratio: 3 and the following formula:Tumor ~`Sex` + `Age` + `Treatment line` + `ECOG Performance Status` + `DOR`"
 
 ``` r
-OS_psm_all$combined_surv_plot
+plot_title <- paste0("OS - PS matching with the full formula and ratio:", paste0(ratio), ":1")
+print(OS_psm_all$combined_surv_plot+
+      plot_annotation(title=plot_title,
+                      theme=theme(plot.title=element_text(size = 20, face = "bold", hjust = 0.5),
+                                  plot.subtitle = element_text(size = 15, hjust = 0.5))))
 ```
 
 ![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-6.png)<!-- -->
+
+``` r
+plot_title <- paste0("PFS - PS matching with the full formula and ratio:", paste0(ratio), ":1")
+print(PFS_psm_all$combined_surv_plot+
+      plot_annotation(title=plot_title,
+                      theme=theme(plot.title=element_text(size = 20, face = "bold", hjust = 0.5),
+                                  plot.subtitle = element_text(size = 15, hjust = 0.5))))
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-7.png)<!-- -->
 
 ``` r
 OS_psm_all$love_plots
@@ -1288,21 +1310,15 @@ OS_psm_all$love_plots
 
     ## $`Melanoma vs RCC`
 
-![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-7.png)<!-- -->
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-8.png)<!-- -->
 
     ## 
     ## $`Melanoma vs NSCLC`
 
-![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-8.png)<!-- -->
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-9.png)<!-- -->
 
     ## 
     ## $`RCC vs NSCLC`
-
-![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-9.png)<!-- -->
-
-``` r
-PFS_psm_all$combined_surv_plot
-```
 
 ![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-10.png)<!-- -->
 
