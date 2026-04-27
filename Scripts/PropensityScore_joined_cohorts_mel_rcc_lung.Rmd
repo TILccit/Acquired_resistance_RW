@@ -825,31 +825,6 @@ PFS_psm_all$combined_surv_plot
 
 ```
 
-```{r PSM using 2 to 1 or 3 to 1, warning=F, message=F,eval=TRUE,  fig.width=25, fig.height=10}
-ratio = 2
-OS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "OS", truncate_month = 60, caliper=0.2,ratio = ratio)
-PFS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "PFS", truncate_month = 60, caliper = 0.2,ratio = ratio)
-
-print(paste0("PS matching with the following formula:", paste0("Tumor ~", matching_features), "and ratio: ", ratio))
-
-OS_psm_all$combined_surv_plot
-OS_psm_all$love_plots
-PFS_psm_all$combined_surv_plot
-
-ratio = 3
-OS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "OS", truncate_month = 60, caliper=0.2,ratio = ratio)
-PFS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "PFS", truncate_month = 60, caliper = 0.2,ratio = ratio)
-
-print(paste0("PS matching with the following formula:", paste0("Tumor ~", matching_features), "and ratio: ", ratio))
-
-OS_psm_all$combined_surv_plot
-OS_psm_all$love_plots
-PFS_psm_all$combined_surv_plot
-
-```
-
-
-
 ## PSM only on CR
 ```{r propensity matching CR,warning=F, message=F,eval=TRUE,  fig.width=15, fig.height=8}
 matching_features_no_DOR <- paste0("`", setdiff(features, c("CPI Regimen", "Brain metastases", "DOR", "Tumor")), "`", collapse = " + ")
@@ -923,6 +898,31 @@ PFS_psm_all$combined_surv_plot+plot_annotation(title="PSM using mahvars for Age"
                                       plot.subtitle = element_text(size = 15, hjust = 0.5)))
 PFS_psm_all$love_plots
 ```
+
+# Sensitivity analysis - Matching with different ratios
+```{r PSM using 2 to 1 or 3 to 1, warning=F, message=F,eval=TRUE,  fig.width=25, fig.height=10}
+ratio = 2
+OS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "OS", truncate_month = 60, caliper=0.2,ratio = ratio)
+PFS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "PFS", truncate_month = 60, caliper = 0.2,ratio = ratio)
+
+print(paste0("PS matching with ratio: ",ratio," and the following formula:", paste0("Tumor ~", matching_features)))
+
+OS_psm_all$combined_surv_plot
+OS_psm_all$love_plots
+PFS_psm_all$combined_surv_plot
+
+ratio = 3
+OS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "OS", truncate_month = 60, caliper=0.2,ratio = ratio)
+PFS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "PFS", truncate_month = 60, caliper = 0.2,ratio = ratio)
+
+print(paste0("PS matching with ratio: ",ratio," and the following formula:", paste0("Tumor ~", matching_features)))
+
+OS_psm_all$combined_surv_plot
+OS_psm_all$love_plots
+PFS_psm_all$combined_surv_plot
+
+```
+
 
 # Median / Max follow up
 ```{r follow up calculation, warning=F, message=F,eval=TRUE,  fig.width=15, fig.height=8}

@@ -1,7 +1,7 @@
 Survival analysis melanoma
 ================
 Mario Presti
-First created on Feb 2025. Updated on 24 April 2026
+First created on Feb 2025. Updated on 27 April 2026
 
 - [Introduction](#introduction)
 - [Loading Libraries](#loading-libraries)
@@ -4128,7 +4128,6 @@ pfs_5y_label <- paste0("5-year PFS: ", round(pfs_5y, 1), "%")
 p_pfs <- ggsurvfit(fit_PFS, size = 1.5, color = "black") +
   add_confidence_interval(fill = "#00BA38", alpha = 0.2) +
     add_censor_mark() +
-    add_confidence_interval()+
     scale_ggsurvfit() +
     add_risktable(
       size            = 7,

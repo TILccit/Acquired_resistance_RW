@@ -1,7 +1,7 @@
 Propensity Scores Calculation and Survival Analysis
 ================
 Mario Presti
-First created on May 2025 Updated on 17 March 2026
+First created on May 2025 Updated on 27 April 2026
 
 - [Introduction](#introduction)
 - [Loading Libraries](#loading-libraries)
@@ -28,6 +28,8 @@ First created on May 2025 Updated on 17 March 2026
   - [PSM only on PR](#psm-only-on-pr)
 - [Sensitivity analysis - PSM on all using different
   calipers](#sensitivity-analysis---psm-on-all-using-different-calipers)
+- [Sensitivity analysis - Matching with different
+  ratios](#sensitivity-analysis---matching-with-different-ratios)
 - [Median / Max follow up](#median--max-follow-up)
 - [Percentages of administrative censored
   patients](#percentages-of-administrative-censored-patients)
@@ -1062,86 +1064,6 @@ PFS_psm_all$combined_surv_plot
 
 ![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20all-5.png)<!-- -->
 
-``` r
-ratio = 2
-OS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "OS", truncate_month = 60, caliper=0.2,ratio = ratio)
-PFS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "PFS", truncate_month = 60, caliper = 0.2,ratio = ratio)
-
-print(paste0("PS matching with the following formula:", paste0("Tumor ~", matching_features), "and ratio: ", ratio))
-```
-
-    ## [1] "PS matching with the following formula:Tumor ~`Sex` + `Age` + `Treatment line` + `ECOG Performance Status` + `DOR`and ratio: 2"
-
-``` r
-OS_psm_all$combined_surv_plot
-```
-
-![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-1.png)<!-- -->
-
-``` r
-OS_psm_all$love_plots
-```
-
-    ## $`Melanoma vs RCC`
-
-![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-2.png)<!-- -->
-
-    ## 
-    ## $`Melanoma vs NSCLC`
-
-![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-3.png)<!-- -->
-
-    ## 
-    ## $`RCC vs NSCLC`
-
-![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-4.png)<!-- -->
-
-``` r
-PFS_psm_all$combined_surv_plot
-```
-
-![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-5.png)<!-- -->
-
-``` r
-ratio = 3
-OS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "OS", truncate_month = 60, caliper=0.2,ratio = ratio)
-PFS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "PFS", truncate_month = 60, caliper = 0.2,ratio = ratio)
-
-print(paste0("PS matching with the following formula:", paste0("Tumor ~", matching_features), "and ratio: ", ratio))
-```
-
-    ## [1] "PS matching with the following formula:Tumor ~`Sex` + `Age` + `Treatment line` + `ECOG Performance Status` + `DOR`and ratio: 3"
-
-``` r
-OS_psm_all$combined_surv_plot
-```
-
-![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-6.png)<!-- -->
-
-``` r
-OS_psm_all$love_plots
-```
-
-    ## $`Melanoma vs RCC`
-
-![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-7.png)<!-- -->
-
-    ## 
-    ## $`Melanoma vs NSCLC`
-
-![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-8.png)<!-- -->
-
-    ## 
-    ## $`RCC vs NSCLC`
-
-![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-9.png)<!-- -->
-
-``` r
-PFS_psm_all$combined_surv_plot
-```
-
-![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-10.png)<!-- -->
-
 ## PSM only on CR
 
 ``` r
@@ -1301,6 +1223,88 @@ PFS_psm_all$love_plots
     ## $`RCC vs NSCLC`
 
 ![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20different%20calipers-9.png)<!-- -->
+
+# Sensitivity analysis - Matching with different ratios
+
+``` r
+ratio = 2
+OS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "OS", truncate_month = 60, caliper=0.2,ratio = ratio)
+PFS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "PFS", truncate_month = 60, caliper = 0.2,ratio = ratio)
+
+print(paste0("PS matching with ratio: ",ratio," and the following formula:", paste0("Tumor ~", matching_features)))
+```
+
+    ## [1] "PS matching with ratio: 2 and the following formula:Tumor ~`Sex` + `Age` + `Treatment line` + `ECOG Performance Status` + `DOR`"
+
+``` r
+OS_psm_all$combined_surv_plot
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-1.png)<!-- -->
+
+``` r
+OS_psm_all$love_plots
+```
+
+    ## $`Melanoma vs RCC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-2.png)<!-- -->
+
+    ## 
+    ## $`Melanoma vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-3.png)<!-- -->
+
+    ## 
+    ## $`RCC vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-4.png)<!-- -->
+
+``` r
+PFS_psm_all$combined_surv_plot
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-5.png)<!-- -->
+
+``` r
+ratio = 3
+OS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "OS", truncate_month = 60, caliper=0.2,ratio = ratio)
+PFS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "PFS", truncate_month = 60, caliper = 0.2,ratio = ratio)
+
+print(paste0("PS matching with ratio: ",ratio," and the following formula:", paste0("Tumor ~", matching_features)))
+```
+
+    ## [1] "PS matching with ratio: 3 and the following formula:Tumor ~`Sex` + `Age` + `Treatment line` + `ECOG Performance Status` + `DOR`"
+
+``` r
+OS_psm_all$combined_surv_plot
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-6.png)<!-- -->
+
+``` r
+OS_psm_all$love_plots
+```
+
+    ## $`Melanoma vs RCC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-7.png)<!-- -->
+
+    ## 
+    ## $`Melanoma vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-8.png)<!-- -->
+
+    ## 
+    ## $`RCC vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-9.png)<!-- -->
+
+``` r
+PFS_psm_all$combined_surv_plot
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-10.png)<!-- -->
 
 # Median / Max follow up
 
@@ -1774,13 +1778,13 @@ power_psm
 ```
 
     ##                          comparison response HR_target  n1  n2 events_D
-    ## Melanoma vs RCC     Melanoma vs RCC       NA 0.7222797 256 256      276
-    ## Melanoma vs NSCLC Melanoma vs NSCLC       NA 0.6661915 472 472      606
-    ## RCC vs NSCLC           RCC vs NSCLC       NA 0.6813344 219 219      303
+    ## Melanoma vs RCC     Melanoma vs RCC       NA 0.7110767 672 256      487
+    ## Melanoma vs NSCLC Melanoma vs NSCLC       NA 0.6750987 790 472      757
+    ## RCC vs NSCLC           RCC vs NSCLC       NA 0.6677098 219 444      459
     ##                       power group
-    ## Melanoma vs RCC   0.7711189   PSM
-    ## Melanoma vs NSCLC 0.9988151   PSM
-    ## RCC vs NSCLC      0.9161399   PSM
+    ## Melanoma vs RCC   0.9197164   PSM
+    ## Melanoma vs NSCLC 0.9994635   PSM
+    ## RCC vs NSCLC      0.9825674   PSM
 
 ``` r
 # power_table_final <- rbind(power_CR,power_PR, power_psm)
@@ -1940,48 +1944,48 @@ print(power_table_heat)
 ```
 
     ##           comparison response HR_target  n1  n2 events_D     power group delta
-    ## 1    Melanoma vs RCC       NA 0.9123036 256 256      276 0.1155438   PSM     3
-    ## 2  Melanoma vs NSCLC       NA 0.8886776 472 472      606 0.3059717   PSM     3
-    ## 3       RCC vs NSCLC       NA 0.8953136 219 219      303 0.1592545   PSM     3
-    ## 4    Melanoma vs RCC       NA 0.8387484 256 256      276 0.3087876   PSM     6
-    ## 5  Melanoma vs NSCLC       NA 0.7996578 472 472      606 0.7857825   PSM     6
-    ## 6       RCC vs NSCLC       NA 0.8104686 219 219      303 0.4478882   PSM     6
-    ## 7    Melanoma vs RCC       NA 0.7761692 256 256      276 0.5575689   PSM     9
-    ## 8  Melanoma vs NSCLC       NA 0.7268485 472 472      606 0.9754035   PSM     9
-    ## 9       RCC vs NSCLC       NA 0.7403124 219 219      303 0.7444142   PSM     9
-    ## 10   Melanoma vs RCC       NA 0.7222797 256 256      276 0.7711189   PSM    12
-    ## 11 Melanoma vs NSCLC       NA 0.6661915 472 472      606 0.9988151   PSM    12
-    ## 12      RCC vs NSCLC       NA 0.6813344 219 219      303 0.9161399   PSM    12
-    ## 13   Melanoma vs RCC       NA 0.6753875 256 256      276 0.9032211   PSM    15
-    ## 14 Melanoma vs NSCLC       NA 0.6148785 472 472      606 0.9999716   PSM    15
-    ## 15      RCC vs NSCLC       NA 0.6310601 219 219      303 0.9796564   PSM    15
-    ## 16   Melanoma vs RCC       NA 0.6342128 256 256      276 0.9658203   PSM    18
-    ## 17 Melanoma vs NSCLC       NA 0.5709050 472 472      606 0.9999996   PSM    18
-    ## 18      RCC vs NSCLC       NA 0.5876953 219 219      303 0.9961657   PSM    18
-    ## 19   Melanoma vs RCC       NA 0.5977700 256 256      276 0.9896717   PSM    21
-    ## 20 Melanoma vs NSCLC       NA 0.5328013 472 472      606 1.0000000   PSM    21
-    ## 21      RCC vs NSCLC       NA 0.5499071 219 219      303 0.9994122   PSM    21
-    ## 22   Melanoma vs RCC       NA 0.5652878 256 256      276 0.9972678   PSM    24
-    ## 23 Melanoma vs NSCLC       NA 0.4994656 472 472      606 1.0000000   PSM    24
-    ## 24      RCC vs NSCLC       NA 0.5166847 219 219      303 0.9999238   PSM    24
-    ## 25   Melanoma vs RCC       NA 0.5361537 256 256      276 0.9993542   PSM    27
-    ## 26 Melanoma vs NSCLC       NA 0.4700557 472 472      606 1.0000000   PSM    27
-    ## 27      RCC vs NSCLC       NA 0.4872480 219 219      303 0.9999914   PSM    27
-    ## 28   Melanoma vs RCC       NA 0.5098755 256 256      276 0.9998612   PSM    30
-    ## 29 Melanoma vs NSCLC       NA 0.4439167 472 472      606 1.0000000   PSM    30
-    ## 30      RCC vs NSCLC       NA 0.4609845 219 219      303 0.9999991   PSM    30
-    ## 31   Melanoma vs RCC       NA 0.4860528 256 256      276 0.9999724   PSM    33
-    ## 32 Melanoma vs NSCLC       NA 0.4205316 472 472      606 1.0000000   PSM    33
-    ## 33      RCC vs NSCLC       NA 0.4374076 219 219      303 0.9999999   PSM    33
-    ## 34   Melanoma vs RCC       NA 0.4643569 256 256      276 0.9999949   PSM    36
-    ## 35 Melanoma vs NSCLC       NA 0.3994871 472 472      606 1.0000000   PSM    36
-    ## 36      RCC vs NSCLC       NA 0.4161250 219 219      303 1.0000000   PSM    36
-    ## 37   Melanoma vs RCC       NA 0.4445152 256 256      276 0.9999991   PSM    39
-    ## 38 Melanoma vs NSCLC       NA 0.3804484 472 472      606 1.0000000   PSM    39
-    ## 39      RCC vs NSCLC       NA 0.3968173 219 219      303 1.0000000   PSM    39
-    ## 40   Melanoma vs RCC       NA 0.4262995 256 256      276 0.9999998   PSM    42
-    ## 41 Melanoma vs NSCLC       NA 0.3631418 472 472      606 1.0000000   PSM    42
-    ## 42      RCC vs NSCLC       NA 0.3792219 219 219      303 1.0000000   PSM    42
+    ## 1    Melanoma vs RCC       NA 0.9077874 672 256      487 0.1572702   PSM     3
+    ## 2  Melanoma vs NSCLC       NA 0.8926051 790 472      757 0.3272676   PSM     3
+    ## 3       RCC vs NSCLC       NA 0.8893520 219 444      459 0.2181722   PSM     3
+    ## 4    Melanoma vs RCC       NA 0.8311453 672 256      487 0.4460115   PSM     6
+    ## 5  Melanoma vs NSCLC       NA 0.8060405 790 472      757 0.8187425   PSM     6
+    ## 6       RCC vs NSCLC       NA 0.8007506 219 444      459 0.6099065   PSM     6
+    ## 7    Melanoma vs RCC       NA 0.7664370 672 256      487 0.7465569   PSM     9
+    ## 8  Melanoma vs NSCLC       NA 0.7347816 790 472      757 0.9839369   PSM     9
+    ## 9       RCC vs NSCLC       NA 0.7282035 219 444      459 0.8917749   PSM     9
+    ## 10   Melanoma vs RCC       NA 0.7110767 672 256      487 0.9197164   PSM    12
+    ## 11 Melanoma vs NSCLC       NA 0.6750987 790 472      757 0.9994635   PSM    12
+    ## 12      RCC vs NSCLC       NA 0.6677098 219 444      459 0.9825674   PSM    12
+    ## 13   Melanoma vs RCC       NA 0.6631750 672 256      487 0.9817380   PSM    15
+    ## 14 Melanoma vs NSCLC       NA 0.6243830 790 472      757 0.9999918   PSM    15
+    ## 15      RCC vs NSCLC       NA 0.6164959 219 444      459 0.9982161   PSM    15
+    ## 16   Melanoma vs RCC       NA 0.6213198 672 256      487 0.9968721   PSM    18
+    ## 17 Melanoma vs NSCLC       NA 0.5807548 790 472      757 0.9999999   PSM    18
+    ## 18      RCC vs NSCLC       NA 0.5725786 219 444      459 0.9998733   PSM    18
+    ## 19   Melanoma vs RCC       NA 0.5844342 672 256      487 0.9995776   PSM    21
+    ## 20 Melanoma vs NSCLC       NA 0.5428253 790 472      757 1.0000000   PSM    21
+    ## 21      RCC vs NSCLC       NA 0.5345023 219 444      459 0.9999933   PSM    21
+    ## 22   Melanoma vs RCC       NA 0.5516827 672 256      487 0.9999532   PSM    24
+    ## 23 Melanoma vs NSCLC       NA 0.5095464 790 472      757 1.0000000   PSM    24
+    ## 24      RCC vs NSCLC       NA 0.5011744 219 444      459 0.9999997   PSM    24
+    ## 25   Melanoma vs RCC       NA 0.5224071 672 256      487 0.9999956   PSM    27
+    ## 26 Melanoma vs NSCLC       NA 0.4801123 790 472      757 1.0000000   PSM    27
+    ## 27      RCC vs NSCLC       NA 0.4717587 219 444      459 1.0000000   PSM    27
+    ## 28   Melanoma vs RCC       NA 0.4960821 672 256      487 0.9999996   PSM    30
+    ## 29 Melanoma vs NSCLC       NA 0.4538931 790 472      757 1.0000000   PSM    30
+    ## 30      RCC vs NSCLC       NA 0.4456047 219 444      459 1.0000000   PSM    30
+    ## 31   Melanoma vs RCC       NA 0.4722829 672 256      487 1.0000000   PSM    33
+    ## 32 Melanoma vs NSCLC       NA 0.4303892 790 472      757 1.0000000   PSM    33
+    ## 33      RCC vs NSCLC       NA 0.4221982 219 444      459 1.0000000   PSM    33
+    ## 34   Melanoma vs RCC       NA 0.4506627 672 256      487 1.0000000   PSM    36
+    ## 35 Melanoma vs NSCLC       NA 0.4091997 790 472      757 1.0000000   PSM    36
+    ## 36      RCC vs NSCLC       NA 0.4011280 219 444      459 1.0000000   PSM    36
+    ## 37   Melanoma vs RCC       NA 0.4309353 672 256      487 1.0000000   PSM    39
+    ## 38 Melanoma vs NSCLC       NA 0.3899988 790 472      757 1.0000000   PSM    39
+    ## 39      RCC vs NSCLC       NA 0.3820608 219 444      459 1.0000000   PSM    39
+    ## 40   Melanoma vs RCC       NA 0.4128626 672 256      487 1.0000000   PSM    42
+    ## 41 Melanoma vs NSCLC       NA 0.3725190 790 472      757 1.0000000   PSM    42
+    ## 42      RCC vs NSCLC       NA 0.3647241 219 444      459 1.0000000   PSM    42
 
 ``` r
 cat("Power for:\n")
@@ -1993,31 +1997,31 @@ cat("Power for:\n")
 cat(paste0(power_table_heat$comparison, " with ", power_table_heat$delta, " months difference is ", round(power_table_heat$power,digits = 3), "\n"))
 ```
 
-    ## Melanoma vs RCC with 3 months difference is 0.116
-    ##  Melanoma vs NSCLC with 3 months difference is 0.306
-    ##  RCC vs NSCLC with 3 months difference is 0.159
-    ##  Melanoma vs RCC with 6 months difference is 0.309
-    ##  Melanoma vs NSCLC with 6 months difference is 0.786
-    ##  RCC vs NSCLC with 6 months difference is 0.448
-    ##  Melanoma vs RCC with 9 months difference is 0.558
-    ##  Melanoma vs NSCLC with 9 months difference is 0.975
-    ##  RCC vs NSCLC with 9 months difference is 0.744
-    ##  Melanoma vs RCC with 12 months difference is 0.771
+    ## Melanoma vs RCC with 3 months difference is 0.157
+    ##  Melanoma vs NSCLC with 3 months difference is 0.327
+    ##  RCC vs NSCLC with 3 months difference is 0.218
+    ##  Melanoma vs RCC with 6 months difference is 0.446
+    ##  Melanoma vs NSCLC with 6 months difference is 0.819
+    ##  RCC vs NSCLC with 6 months difference is 0.61
+    ##  Melanoma vs RCC with 9 months difference is 0.747
+    ##  Melanoma vs NSCLC with 9 months difference is 0.984
+    ##  RCC vs NSCLC with 9 months difference is 0.892
+    ##  Melanoma vs RCC with 12 months difference is 0.92
     ##  Melanoma vs NSCLC with 12 months difference is 0.999
-    ##  RCC vs NSCLC with 12 months difference is 0.916
-    ##  Melanoma vs RCC with 15 months difference is 0.903
+    ##  RCC vs NSCLC with 12 months difference is 0.983
+    ##  Melanoma vs RCC with 15 months difference is 0.982
     ##  Melanoma vs NSCLC with 15 months difference is 1
-    ##  RCC vs NSCLC with 15 months difference is 0.98
-    ##  Melanoma vs RCC with 18 months difference is 0.966
+    ##  RCC vs NSCLC with 15 months difference is 0.998
+    ##  Melanoma vs RCC with 18 months difference is 0.997
     ##  Melanoma vs NSCLC with 18 months difference is 1
-    ##  RCC vs NSCLC with 18 months difference is 0.996
-    ##  Melanoma vs RCC with 21 months difference is 0.99
+    ##  RCC vs NSCLC with 18 months difference is 1
+    ##  Melanoma vs RCC with 21 months difference is 1
     ##  Melanoma vs NSCLC with 21 months difference is 1
-    ##  RCC vs NSCLC with 21 months difference is 0.999
-    ##  Melanoma vs RCC with 24 months difference is 0.997
+    ##  RCC vs NSCLC with 21 months difference is 1
+    ##  Melanoma vs RCC with 24 months difference is 1
     ##  Melanoma vs NSCLC with 24 months difference is 1
     ##  RCC vs NSCLC with 24 months difference is 1
-    ##  Melanoma vs RCC with 27 months difference is 0.999
+    ##  Melanoma vs RCC with 27 months difference is 1
     ##  Melanoma vs NSCLC with 27 months difference is 1
     ##  RCC vs NSCLC with 27 months difference is 1
     ##  Melanoma vs RCC with 30 months difference is 1

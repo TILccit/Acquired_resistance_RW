@@ -1,7 +1,7 @@
 Survival analysis renal
 ================
 Mario Presti
-First created on Feb 2025. Updated on 16 March 2026
+First created on Feb 2025. Updated on 27 April 2026
 
 - [Introduction](#introduction)
 - [Loading Libraries](#loading-libraries)
@@ -1654,7 +1654,7 @@ results_df %>%
   column_spec(6, border_right = TRUE)
 ```
 
-<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
 
 <caption>
 
@@ -3315,7 +3315,7 @@ p_os <- ggsurvfit(fit_OS, size = 1.5) +
     ## ℹ Please use `linewidth` instead.
     ## ℹ The deprecated feature was likely used in the ggsurvfit package.
     ##   Please report the issue at <https://github.com/pharmaverse/ggsurvfit/issues>.
-    ## This warning is displayed once every 8 hours.
+    ## This warning is displayed once per session.
     ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
     ## generated.
 
