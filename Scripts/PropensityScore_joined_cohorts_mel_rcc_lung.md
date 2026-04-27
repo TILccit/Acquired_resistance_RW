@@ -1,21 +1,51 @@
----
-title: "Propensity Scores Calculation and Survival Analysis"
-subtitle: <center> Parial responders </center>
-author: "Mario Presti"
-date: '`r paste("First created on May 2025 Updated on ", format(Sys.Date(), "%d %B %Y"))`'
-output:
-  github_document:
-    toc: true
-    toc_depth: 5
----
+Propensity Scores Calculation and Survival Analysis
+================
+Mario Presti
+First created on May 2025 Updated on 27 April 2026
+
+- [Introduction](#introduction)
+- [Loading Libraries](#loading-libraries)
+  - [Pre-processing of data](#pre-processing-of-data)
+- [Baseline Characteristics of Patients Before Propensity Score
+  Matching](#baseline-characteristics-of-patients-before-propensity-score-matching)
+- [Survival analysis using unmatched patient
+  data](#survival-analysis-using-unmatched-patient-data)
+  - [Overall survival](#overall-survival)
+    - [Administrative censoring](#administrative-censoring)
+    - [Combined survival analysis OS](#combined-survival-analysis-os)
+      - [OS - paired analysis stratified by response before
+        PSM](#os---paired-analysis-stratified-by-response-before-psm)
+  - [Progression free survival](#progression-free-survival)
+    - [Combined survival analysis PFS](#combined-survival-analysis-pfs)
+    - [PFS - paired analysis stratified by response before
+      PSM](#pfs---paired-analysis-stratified-by-response-before-psm)
+- [Propensity Score Matching for Treatment Groups Based on Clinical
+  Features - matching cohorts in pairs of
+  2](#propensity-score-matching-for-treatment-groups-based-on-clinical-features---matching-cohorts-in-pairs-of-2)
+  - [Matching with standardized caliper - using custom
+    function](#matching-with-standardized-caliper---using-custom-function)
+  - [PSM only on CR](#psm-only-on-cr)
+  - [PSM only on PR](#psm-only-on-pr)
+- [Sensitivity analysis - PSM on all using different
+  calipers](#sensitivity-analysis---psm-on-all-using-different-calipers)
+- [Sensitivity analysis - Matching with different
+  ratios](#sensitivity-analysis---matching-with-different-ratios)
+- [Median / Max follow up](#median--max-follow-up)
+- [Percentages of administrative censored
+  patients](#percentages-of-administrative-censored-patients)
+  - [Administrative censoring rates per
+    tumour](#administrative-censoring-rates-per-tumour)
+- [Differential distribution of CRs](#differential-distribution-of-crs)
+- [Post-hoc power analysis](#post-hoc-power-analysis)
 
 # Introduction
 
-This analysis investigates propensity score matching in patients based on PD-L1 expression and other clinical parameters.
+This analysis investigates propensity score matching in patients based
+on PD-L1 expression and other clinical parameters.
 
 # Loading Libraries
 
-```{r dataLoad,warning=F, message=F,eval=TRUE}
+``` r
 # Load required libraries
 library(data.table)
 library(stringr)
@@ -44,15 +74,18 @@ Tailcall <- function(f, x, char, symmetrical, recursive) {
   f(x, char, symmetrical, recursive)
 }
 ```
+
 ## Pre-processing of data
 
-* Check that all columns have no spaces etc, especially character columns, 
-* transform character columns to factors. 
-* Check if all factors are ok.
-* Check numerical columns.
+- Check that all columns have no spaces etc, especially character
+  columns,
+- transform character columns to factors.
+- Check if all factors are ok.
+- Check numerical columns.
 
-#Joining melanoma and RCC datasets, plus data cleaning
-```{r Joining, message=F, warning=F}
+\#Joining melanoma and RCC datasets, plus data cleaning
+
+``` r
 setwd("E:/PhD_projects/Realworld/Data")
 dataMel <- read.csv("Melanoma_data_polished.csv",check.names = F)
 dataLung <- read.csv("Lung_data_polished.csv",check.names = F)
@@ -74,24 +107,38 @@ names(dataDF)[names(dataDF) == 'Objective response'] <- 'Objective_response'
 xpos <-  60 
 y_cr <- 0.85  # height for the CR p‐value
 y_pr <- 0.30  # height for the PR p‐value
-
 ```
 
-We first need to define which columns we want as character (categorical), and which need to be numerical. Sometimes things get messed up with excel files.
+We first need to define which columns we want as character
+(categorical), and which need to be numerical. Sometimes things get
+messed up with excel files.
 
-```{r data cleaning,warning=F, message=F,eval=TRUE}
+``` r
 # Define caliper 
 caliper = 0.2
 
 cat(paste0("Your will use a caliper of ", print(caliper)))
+```
 
+    ## [1] 0.2
+    ## Your will use a caliper of 0.2
+
+``` r
 # Check for duplicates
 any(duplicated(dataDF$record_id))
+```
 
+    ## [1] FALSE
+
+``` r
 # Remove duplicates
 dataDF <- dataDF[!duplicated(dataDF), ]
 dim(dataDF)
+```
 
+    ## [1] 2127   13
+
+``` r
 features <- c("Sex", "Age","Treatment line","Brain metastases", "ECOG Performance Status", 
               "Objective_response","Tumor")
 
@@ -131,18 +178,67 @@ dataDF <- dataDF %>% mutate(across(all_of(categ_feats), as.factor))
 dataDF <- dataDF %>% select(all_of(c(colnames(dataDF)[1], OS_time,OS_status, PFS_time,PFS_status, features, "CPI Regimen"))) %>% distinct()
 
 print("Numbers per response")
+```
+
+    ## [1] "Numbers per response"
+
+``` r
 table(dataDF$bor_text)
+```
 
+    ## < table of extent 0 >
+
+``` r
 print("Numbers per treatment")
-table(dataDF$regime_correct)
+```
 
+    ## [1] "Numbers per treatment"
+
+``` r
+table(dataDF$regime_correct)
+```
+
+    ## < table of extent 0 >
+
+``` r
 # Days to Months
 dataDF$OS_months <- dataDF$OS_days /30.44
 dataDF$PFS_months <- dataDF$PFS_days /30.44
 
 ## SUMMARY OF THE DATA
 summary(dataDF)
+```
 
+    ##   record_id            OS_days            Dead           PFS_days     
+    ##  Length:2127        Min.   :  42.0   Min.   :0.0000   Min.   :  42.0  
+    ##  Class :character   1st Qu.: 668.5   1st Qu.:0.0000   1st Qu.: 330.5  
+    ##  Mode  :character   Median :1211.0   Median :0.0000   Median : 726.0  
+    ##                     Mean   :1385.8   Mean   :0.3926   Mean   : 969.0  
+    ##                     3rd Qu.:2009.5   3rd Qu.:1.0000   3rd Qu.:1485.5  
+    ##                     Max.   :4438.0   Max.   :1.0000   Max.   :4163.0  
+    ##    Progressed         Sex            Age        Treatment line Brain metastases
+    ##  Min.   :0.0000   Female: 932   Min.   :24.58   First:1697     No :1854        
+    ##  1st Qu.:0.0000   Male  :1193   1st Qu.:60.13   Other: 430     Yes: 273        
+    ##  Median :1.0000   NA's  :   2   Median :69.00                                  
+    ##  Mean   :0.5811                 Mean   :67.44                                  
+    ##  3rd Qu.:1.0000                 3rd Qu.:75.68                                  
+    ##  Max.   :1.0000                 Max.   :94.10                                  
+    ##  ECOG Performance Status Objective_response      Tumor      CPI Regimen       
+    ##  PS=0:1101               CR: 728            Melanoma:1199   Length:2127       
+    ##  PS≥1:1017               PR:1399            NSCLC   : 667   Class :character  
+    ##  NA's:   9                                  RCC     : 261   Mode  :character  
+    ##                                                                               
+    ##                                                                               
+    ##                                                                               
+    ##    OS_months        PFS_months    
+    ##  Min.   :  1.38   Min.   :  1.38  
+    ##  1st Qu.: 21.96   1st Qu.: 10.86  
+    ##  Median : 39.78   Median : 23.85  
+    ##  Mean   : 45.53   Mean   : 31.83  
+    ##  3rd Qu.: 66.02   3rd Qu.: 48.80  
+    ##  Max.   :145.80   Max.   :136.76
+
+``` r
 names(dataDF)[names(dataDF) == 'Objective_response'] <- 'DOR'
 features <- c("Sex", "Age","Treatment line","Brain metastases", "ECOG Performance Status", 
               "DOR","Tumor")
@@ -156,9 +252,10 @@ dataDF <- dataDF %>%
     )) %>%
   filter(if_all(everything(), ~ !is.na(.)))
 ```
+
 # Baseline Characteristics of Patients Before Propensity Score Matching
 
-```{r baseline table,warning=F, message=F,eval=TRUE}
+``` r
 common_cols <- intersect(names(dataMel), names(dataRCC))
 lung_specific_cols <- setdiff(names(dataLung),common_cols)
 melanoma_specific_cols <- setdiff(names(dataMel),c(common_cols, "Dead_Mel", "PS"))
@@ -259,30 +356,103 @@ export2word(Baseline_Characteristics_pvals, caption = "Supplementary table 1. Pa
 Baseline_Characteristics_table_Partial_patients
 ```
 
-
-
-
-
-
-
-
-
+    ## 
+    ## --------Summary descriptives table by 'Tumor'---------
+    ## 
+    ## _____________________________________________________________________________ 
+    ##                                Melanoma           RCC             NSCLC       
+    ##                                 N=1199           N=261            N=667       
+    ## ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯ 
+    ## Sex:                                                                          
+    ##     Female                   487 (40.6%)       59 (22.6%)      386 (57.9%)    
+    ##     Male                     712 (59.4%)      200 (76.6%)      281 (42.1%)    
+    ##     Missing data               0 (0.0%)         2 (0.7%)         0 (0.0%)     
+    ## Age                        70.0 [59.1;76.9] 65.4 [58.4;72.3] 69.0 [63.0;75.0] 
+    ## Treatment line:                                                               
+    ##     First                    1031 (86.0%)     189 (72.4%)      477 (71.5%)    
+    ##     Other                    168 (14.0%)       72 (27.6%)      190 (28.5%)    
+    ## Brain metastases:                                                             
+    ##     No                       1011 (84.3%)     250 (95.8%)      593 (88.9%)    
+    ##     Yes                      188 (15.7%)       11 (4.2%)        74 (11.1%)    
+    ## ECOG Performance Status:                                                      
+    ##     PS=0                     787 (65.6%)      128 (49.0%)      186 (27.9%)    
+    ##     PS≥1                     409 (34.1%)      130 (49.8%)      478 (71.7%)    
+    ##     Missing data               3 (0.2%)         3 (1.1%)         3 (0.4%)     
+    ## Objective Response:                                                           
+    ##     CR                       576 (48.0%)       79 (30.3%)       73 (10.9%)    
+    ##     PR                       623 (52.0%)      182 (69.7%)      594 (89.1%)    
+    ## CPI Regimen:                                                                  
+    ##     Anti-PD1                 789 (65.8%)       61 (23.4%)      667 (100.0%)   
+    ##     Anti-PD1+Anti-CTLA4      410 (34.2%)      200 (76.6%)        0 (0.0%)     
+    ## Previous adjuvant therapy:                                                    
+    ##     No                       1098 (91.6%)          NA               NA        
+    ##     Yes                       101 (8.4%)           NA               NA        
+    ## Melanoma subtype:                                                             
+    ##     Cutaneous                949 (79.1%)           NA               NA        
+    ##     Mucosal                   38 (3.1%)            NA               NA        
+    ##     Unk. primary             212 (17.7%)           NA               NA        
+    ## BRAF mutation:                                                                
+    ##     Mutant                   504 (42.0%)           NA               NA        
+    ##     Wild type                667 (55.6%)           NA               NA        
+    ##     Missing data              28 (2.3%)            NA               NA        
+    ## AJCC 8th stage:                                                               
+    ##     III/M1a/M1b              503 (42.0%)           NA               NA        
+    ##     M1c/M1d                  696 (58.0%)           NA               NA        
+    ## LDH:                                                                          
+    ##     Elevated                 339 (28.3%)           NA               NA        
+    ##     Normal                   821 (68.5%)           NA               NA        
+    ##     Missing data              39 (3.2%)            NA               NA        
+    ## PD-L1 status:                                                                 
+    ##     PDL1<50%                      NA               NA           87 (13.0%)    
+    ##     PDL1≥50%                      NA               NA          546 (81.9%)    
+    ##     Missing data                  NA               NA           34 (5.1%)     
+    ## NSCLC subtype:                                                                
+    ##     Nonsquamous                   NA               NA          546 (81.9%)    
+    ##     Squamous                      NA               NA          121 (18.1%)    
+    ## Dead_RCC                       . [.;.]      0.00 [0.00;1.00]     . [.;.]      
+    ## RCC subtype:                                                                  
+    ##     Clear cell                    NA          225 (86.2%)           NA        
+    ##     Non clear cell                NA           36 (13.8%)           NA        
+    ## Sarcomatoid subtype:                                                          
+    ##     Non sarcomatoid               NA          182 (69.7%)           NA        
+    ##     Sarcomatoid                   NA           79 (30.3%)           NA        
+    ## IMDC:                                                                         
+    ##     Good/Intermediate             NA          187 (71.6%)           NA        
+    ##     Poor                          NA           74 (28.4%)           NA        
+    ## ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
 
 # Survival analysis using unmatched patient data
+
 ## Overall survival
+
 ### Administrative censoring
-```{r admin censoring, warning=FALSE, message=FALSE, fig.width=15, fig.height=8, eval=TRUE}
+
+``` r
 # Administrative censoring at 60 months
 dataDF$censor_time_OS   <- pmin(dataDF$OS_months, 60)
 dataDF$censor_status_OS <- ifelse(dataDF$OS_months > 60, 0, dataDF$Dead)
 ```
 
 ### Combined survival analysis OS
-```{r Survival analysis OS, warning=FALSE, message=FALSE, fig.width=15, fig.height=8, eval=TRUE}
+
+``` r
 # Compute the Kaplan-Meier model
 fit_overall = survfit(Surv(dataDF$censor_time_OS, dataDF$censor_status_OS) ~ Tumor+DOR, data=dataDF)
 print(fit_overall)
+```
 
+    ## Call: survfit(formula = Surv(dataDF$censor_time_OS, dataDF$censor_status_OS) ~ 
+    ##     Tumor + DOR, data = dataDF)
+    ## 
+    ##                          n events median 0.95LCL 0.95UCL
+    ## Tumor=Melanoma, DOR=CR 576     57     NA      NA      NA
+    ## Tumor=Melanoma, DOR=PR 620    251   46.0    38.7    55.4
+    ## Tumor=NSCLC, DOR=CR     73     17     NA      NA      NA
+    ## Tumor=NSCLC, DOR=PR    591    334   42.6    38.2    48.4
+    ## Tumor=RCC, DOR=CR       79      3     NA      NA      NA
+    ## Tumor=RCC, DOR=PR      178     75     NA    50.6      NA
+
+``` r
 # Modify the names of the strata to remove "regime_correct="
 names(fit_overall$strata) <- sub("Tumor=", "", names(fit_overall$strata))
 names(fit_overall$strata) <- sub("DOR=", "", names(fit_overall$strata))
@@ -426,11 +596,13 @@ final_plot <- p_km + p_forest2 +
   )
 
 print(final_plot)
-
 ```
 
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/Survival%20analysis%20OS-1.png)<!-- -->
+
 #### OS - paired analysis stratified by response before PSM
-```{r Pairwise OS analysis,warning=F, message=F,eval=TRUE, fig.width=25, fig.height=10}
+
+``` r
 comps <- list(
   c("Melanoma",   "RCC"),
   c("Melanoma",   "NSCLC"),
@@ -456,7 +628,11 @@ OS_CR +
       plot.subtitle = element_text(size = 30,, face = "italic", hjust = 0.5)
     )
   )
+```
 
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/Pairwise%20OS%20analysis-1.png)<!-- -->
+
+``` r
 res_OS_PR <- run_survival_comparisons(
   dataDF = subset(dataDF,DOR=="PR"),
   comparisons       = comps,
@@ -478,10 +654,13 @@ OS_PR +
   )
 ```
 
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/Pairwise%20OS%20analysis-2.png)<!-- -->
 
 ## Progression free survival
+
 ### Combined survival analysis PFS
-```{r Survival analysis - PFS, warning=FALSE, message=FALSE, fig.width=15, fig.height=12, eval=TRUE}
+
+``` r
 # Administrative censoring at 60 months
 dataDF$censor_time_PFS   <- pmin(dataDF$PFS_months, 60)
 dataDF$censor_status_PFS <- ifelse(dataDF$PFS_months > 60, 0, dataDF$Progressed)
@@ -638,8 +817,17 @@ final_plot <- p_km + p_forest2 +
   )
 
 print(p_km)
-print(final_plot)
+```
 
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/Survival%20analysis%20-%20PFS-1.png)<!-- -->
+
+``` r
+print(final_plot)
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/Survival%20analysis%20-%20PFS-2.png)<!-- -->
+
+``` r
 #perform pairwise comparisons among the PFS curves
 pairs <- combn(unique(dataDF$Tumor), 2, simplify = FALSE)
 PR_results <- lapply(pairs, function(pair) {
@@ -672,6 +860,14 @@ PR_results <- lapply(pairs, function(pair) {
 PR_pvals <- bind_rows(PR_results) %>%
   mutate(p.adj = p.adjust(p.value, method = "bonferroni"))
 PR_pvals
+```
+
+    ##          comparison        HR  Lower_95  Upper_95   p.value     p.adj
+    ## 1   Melanoma vs RCC 0.8646867 0.7092980 1.0541171 0.1502914 0.4508741
+    ## 2 Melanoma vs NSCLC 0.8674949 0.7580637 0.9927233 0.0388172 0.1164516
+    ## 3      RCC vs NSCLC 1.0253783 0.8444288 1.2451029 0.8002748 1.0000000
+
+``` r
 ##Now for CR patients
 pairs <- combn(unique(dataDF$Tumor), 2, simplify = FALSE)
 CR_results <- lapply(pairs, function(pair) {
@@ -704,7 +900,14 @@ CR_results <- lapply(pairs, function(pair) {
 CR_pvals <- bind_rows(CR_results) %>%
   mutate(p.adj = p.adjust(p.value, method = "bonferroni"))
 CR_pvals
+```
 
+    ##          comparison       HR  Lower_95 Upper_95   p.value     p.adj
+    ## 1   Melanoma vs RCC 1.123322 0.7073093 1.784018 0.6222048 1.0000000
+    ## 2 Melanoma vs NSCLC 1.298940 0.8391503 2.010659 0.2406806 0.7220419
+    ## 3      RCC vs NSCLC 1.067709 0.5908494 1.929430 0.8281998 1.0000000
+
+``` r
 ### Median time to progression in PR vs CR
 fit_PFS <- survfit(
   Surv(censor_time_PFS, censor_status_PFS) ~ DOR,
@@ -712,7 +915,11 @@ fit_PFS <- survfit(
 )
 
 print(final_plot)
+```
 
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/Survival%20analysis%20-%20PFS-3.png)<!-- -->
+
+``` r
 PFS_all +
     add_censor_mark() +
     add_confidence_interval()+
@@ -750,8 +957,11 @@ PFS_all +
   ) 
 ```
 
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/Survival%20analysis%20-%20PFS-4.png)<!-- -->
+
 ### PFS - paired analysis stratified by response before PSM
-```{r Pairwise PFS,warning=F, message=F,eval=TRUE,  fig.width=25, fig.height=10}
+
+``` r
 comps <- list(
   c("Melanoma",   "RCC"),
   c("Melanoma",   "NSCLC"),
@@ -777,8 +987,11 @@ res_PFS_CR[[3]] +
       plot.subtitle = element_text(size = 30,, face = "italic", hjust = 0.5)
     )
   )
+```
 
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/Pairwise%20PFS-1.png)<!-- -->
 
+``` r
 res_PFS_PR <- run_survival_comparisons(dataDF = subset(dataDF,DOR=="PR"),
   comparisons       = comps,
   covariate_to_split= "Tumor",
@@ -797,16 +1010,15 @@ PFS_PR +
       plot.subtitle = element_text(size = 30,, face = "italic", hjust = 0.5)
     )
   )
-
 ```
 
-
-
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/Pairwise%20PFS-2.png)<!-- -->
 
 # Propensity Score Matching for Treatment Groups Based on Clinical Features - matching cohorts in pairs of 2
 
 ## Matching with standardized caliper - using custom function
-```{r propensity matching all,warning=F, message=F,eval=TRUE,  fig.width=25, fig.height=10}
+
+``` r
 matching_features <- paste0("`", setdiff(features, c("CPI Regimen", "Brain metastases", "Tumor")), "`", collapse = " + ")
 matching_formula <- as.formula(paste0("Tumor ~", matching_features))
 
@@ -818,15 +1030,43 @@ OS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons,ma
 PFS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "PFS", truncate_month = 60, caliper = 0.2)
 
 print(paste0("PS matching with the following formula:", paste0("Tumor ~", matching_features)))
-
-OS_psm_all$combined_surv_plot
-OS_psm_all$love_plots
-PFS_psm_all$combined_surv_plot
-
 ```
 
+    ## [1] "PS matching with the following formula:Tumor ~`Sex` + `Age` + `Treatment line` + `ECOG Performance Status` + `DOR`"
+
+``` r
+OS_psm_all$combined_surv_plot
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20all-1.png)<!-- -->
+
+``` r
+OS_psm_all$love_plots
+```
+
+    ## $`Melanoma vs RCC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20all-2.png)<!-- -->
+
+    ## 
+    ## $`Melanoma vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20all-3.png)<!-- -->
+
+    ## 
+    ## $`RCC vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20all-4.png)<!-- -->
+
+``` r
+PFS_psm_all$combined_surv_plot
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20all-5.png)<!-- -->
+
 ## PSM only on CR
-```{r propensity matching CR,warning=F, message=F,eval=TRUE,  fig.width=15, fig.height=8}
+
+``` r
 matching_features_no_DOR <- paste0("`", setdiff(features, c("CPI Regimen", "Brain metastases", "DOR", "Tumor")), "`", collapse = " + ")
 matching_formula_no_DOR <- as.formula(paste0("Tumor ~", matching_features_no_DOR))
 
@@ -836,31 +1076,94 @@ OS_psm_CR <- run_psm_and_survival(dataDF = subset(dataDF, DOR == "CR"), matching
 PFS_psm_CR <- run_psm_and_survival(dataDF = subset(dataDF, DOR == "CR"),matching_formula= matching_formula_no_DOR, comparisons = comparisons,covariate_to_split = "Tumor", endpoint = "PFS", truncate_month = 60)
 
 print(paste0("PS matching with the following formula:", paste0("Tumor ~", matching_features)))
-OS_psm_CR$combined_surv_plot
-PFS_psm_CR$combined_surv_plot
+```
 
+    ## [1] "PS matching with the following formula:Tumor ~`Sex` + `Age` + `Treatment line` + `ECOG Performance Status` + `DOR`"
+
+``` r
+OS_psm_CR$combined_surv_plot
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20CR-1.png)<!-- -->
+
+``` r
+PFS_psm_CR$combined_surv_plot
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20CR-2.png)<!-- -->
+
+``` r
 OS_psm_CR$love_plots
+```
+
+    ## $`Melanoma vs RCC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20CR-3.png)<!-- -->
+
+    ## 
+    ## $`Melanoma vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20CR-4.png)<!-- -->
+
+    ## 
+    ## $`RCC vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20CR-5.png)<!-- -->
+
+``` r
 PFS_psm_CR$love_plots
 ```
 
+    ## $`Melanoma vs RCC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20CR-6.png)<!-- -->
+
+    ## 
+    ## $`Melanoma vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20CR-7.png)<!-- -->
+
+    ## 
+    ## $`RCC vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20CR-8.png)<!-- -->
+
 ## PSM only on PR
-```{r propensity matching PR,warning=F, message=F,eval=TRUE,  fig.width=15, fig.height=8}
+
+``` r
 matching_features <- paste0("`", setdiff(features, c("CPI Regimen", "Brain metastases", "DOR", "Tumor")), "`", collapse = " + ")
 matching_formula <- as.formula(paste0("Tumor ~", matching_features))
 
 comparisons <- list(c("Melanoma", "RCC"), c("Melanoma", "NSCLC"), c("RCC", "NSCLC"))
 matching_formula
+```
+
+    ## Tumor ~ Sex + Age + `Treatment line` + `ECOG Performance Status`
+
+``` r
 OS_psm_PR <- run_psm_and_survival(dataDF = subset(dataDF, DOR == "PR"), comparisons = comparisons, matching_formula = matching_formula_no_DOR, covariate_to_split = "Tumor", endpoint = "OS", truncate_month = 60)
 PFS_psm_PR <- run_psm_and_survival(dataDF = subset(dataDF, DOR == "PR"), comparisons = comparisons, matching_formula = matching_formula_no_DOR,covariate_to_split = "Tumor", endpoint = "PFS", truncate_month = 60)
 
 print(paste0("PS matching with the following formula:", paste0("Tumor ~", matching_features)))
+```
 
+    ## [1] "PS matching with the following formula:Tumor ~`Sex` + `Age` + `Treatment line` + `ECOG Performance Status`"
+
+``` r
 OS_psm_PR$combined_surv_plot
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20PR-1.png)<!-- -->
+
+``` r
 PFS_psm_PR$combined_surv_plot
 ```
 
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20PR-2.png)<!-- -->
+
 # Sensitivity analysis - PSM on all using different calipers
-```{r propensity matching different calipers,warning=F, message=F,eval=TRUE,  fig.width=15, fig.height=8}
+
+``` r
 matching_features <- paste0("`", setdiff(features, c("CPI Regimen", "Brain metastases", "Tumor")), "`", collapse = " + ")
 matching_formula <- as.formula(paste0("Tumor ~", matching_features))
 
@@ -885,8 +1188,11 @@ for (caliper in calipers){
   )
   )
 }
+```
 
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20different%20calipers-1.png)<!-- -->![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20different%20calipers-2.png)<!-- -->![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20different%20calipers-3.png)<!-- -->![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20different%20calipers-4.png)<!-- -->![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20different%20calipers-5.png)<!-- -->
 
+``` r
 PFS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons,
                                       matching_formula, covariate_to_split = "Tumor",
                                       descr_formula = NULL, endpoint = "PFS",
@@ -896,51 +1202,129 @@ PFS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons,
 PFS_psm_all$combined_surv_plot+plot_annotation(title="PSM using mahvars for Age",
                           theme=theme(plot.title=element_text(size = 20, face = "bold", hjust = 0.5),
                                       plot.subtitle = element_text(size = 15, hjust = 0.5)))
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20different%20calipers-6.png)<!-- -->
+
+``` r
 PFS_psm_all$love_plots
 ```
 
+    ## $`Melanoma vs RCC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20different%20calipers-7.png)<!-- -->
+
+    ## 
+    ## $`Melanoma vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20different%20calipers-8.png)<!-- -->
+
+    ## 
+    ## $`RCC vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/propensity%20matching%20different%20calipers-9.png)<!-- -->
+
 # Sensitivity analysis - Matching with different ratios
-```{r PSM using 2 to 1 or 3 to 1, warning=F, message=F,eval=TRUE,  fig.width=25, fig.height=10}
+
+``` r
 ratio = 2
 OS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "OS", truncate_month = 60, caliper=0.2,ratio = ratio)
 PFS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "PFS", truncate_month = 60, caliper = 0.2,ratio = ratio)
 
 print(paste0("PS matching with ratio: ",ratio," and the following formula:", paste0("Tumor ~", matching_features)))
+```
 
+    ## [1] "PS matching with ratio: 2 and the following formula:Tumor ~`Sex` + `Age` + `Treatment line` + `ECOG Performance Status` + `DOR`"
+
+``` r
 plot_title <- paste0("OS - PS matching with the full formula and ratio:", paste0(ratio), ":1")
 print(OS_psm_all$combined_surv_plot+
       plot_annotation(title=plot_title,
                       theme=theme(plot.title=element_text(size = 20, face = "bold", hjust = 0.5),
                                   plot.subtitle = element_text(size = 15, hjust = 0.5))))
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-1.png)<!-- -->
+
+``` r
 plot_title <- paste0("PFS - PS matching with the full formula and ratio:", paste0(ratio), ":1")
 print(PFS_psm_all$combined_surv_plot+
       plot_annotation(title=plot_title,
                       theme=theme(plot.title=element_text(size = 20, face = "bold", hjust = 0.5),
                                   plot.subtitle = element_text(size = 15, hjust = 0.5))))
-OS_psm_all$love_plots
+```
 
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-2.png)<!-- -->
+
+``` r
+OS_psm_all$love_plots
+```
+
+    ## $`Melanoma vs RCC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-3.png)<!-- -->
+
+    ## 
+    ## $`Melanoma vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-4.png)<!-- -->
+
+    ## 
+    ## $`RCC vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-5.png)<!-- -->
+
+``` r
 ratio = 3
 OS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "OS", truncate_month = 60, caliper=0.2,ratio = ratio)
 PFS_psm_all <- run_psm_and_survival(dataDF = dataDF, comparisons = comparisons, matching_formula, covariate_to_split = "Tumor",descr_formula = NULL, endpoint = "PFS", truncate_month = 60, caliper = 0.2,ratio = ratio)
 
 print(paste0("PS matching with ratio: ",ratio," and the following formula:", paste0("Tumor ~", matching_features)))
+```
 
+    ## [1] "PS matching with ratio: 3 and the following formula:Tumor ~`Sex` + `Age` + `Treatment line` + `ECOG Performance Status` + `DOR`"
+
+``` r
 plot_title <- paste0("OS - PS matching with the full formula and ratio:", paste0(ratio), ":1")
 print(OS_psm_all$combined_surv_plot+
       plot_annotation(title=plot_title,
                       theme=theme(plot.title=element_text(size = 20, face = "bold", hjust = 0.5),
                                   plot.subtitle = element_text(size = 15, hjust = 0.5))))
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-6.png)<!-- -->
+
+``` r
 plot_title <- paste0("PFS - PS matching with the full formula and ratio:", paste0(ratio), ":1")
 print(PFS_psm_all$combined_surv_plot+
       plot_annotation(title=plot_title,
                       theme=theme(plot.title=element_text(size = 20, face = "bold", hjust = 0.5),
                                   plot.subtitle = element_text(size = 15, hjust = 0.5))))
+```
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-7.png)<!-- -->
+
+``` r
 OS_psm_all$love_plots
 ```
 
+    ## $`Melanoma vs RCC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-8.png)<!-- -->
+
+    ## 
+    ## $`Melanoma vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-9.png)<!-- -->
+
+    ## 
+    ## $`RCC vs NSCLC`
+
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/PSM%20using%202%20to%201%20or%203%20to%201-10.png)<!-- -->
 
 # Median / Max follow up
-```{r follow up calculation, warning=F, message=F,eval=TRUE,  fig.width=15, fig.height=8}
+
+``` r
 for(i in unique(dataDF$Tumor)) {
   rev_surv_obj <- with(
     subset(dataDF, Tumor == i),
@@ -971,7 +1355,21 @@ for(i in unique(dataDF$Tumor)) {
   max_fu <- max(rev_fit$time, na.rm = TRUE) / 12
   cat(sprintf("  Maximum follow-up = %.2f years\n\n", max_fu))
 }
+```
 
+    ## Tumour: Melanoma
+    ##   Median follow-up = 4.92 years (95% CI 4.66–NA)
+    ##   Maximum follow-up = 5.00 years
+    ## 
+    ## Tumour: RCC
+    ##   Median follow-up = 4.50 years (95% CI 4.22–4.74)
+    ##   Maximum follow-up = 5.00 years
+    ## 
+    ## Tumour: NSCLC
+    ##   Median follow-up = 5.00 years (95% CI NA–NA)
+    ##   Maximum follow-up = 5.00 years
+
+``` r
 # Fit the reverse‐KM: event = still under follow‐up (i.e. censor_status_OS == 0)
 rev_fit_all <- survfit(
   Surv(censor_time_OS, censor_status_OS == 0) ~ Tumor,
@@ -1006,9 +1404,13 @@ p_rev<- p_rev$plot+geom_hline(yintercept = 50, linetype = "dashed")
 print(p_rev)
 ```
 
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/follow%20up%20calculation-1.png)<!-- -->
+
 # Percentages of administrative censored patients
+
 ## Administrative censoring rates per tumour
-```{r admin_censoring, warning=FALSE, message=FALSE}
+
+``` r
 library(dplyr)
 
 admin_censoring_OS <- dataDF %>%
@@ -1027,7 +1429,11 @@ admin_censoring_OS %>%
   ) %>%
   pull(summary) %>%
   cat(sep = "\n")
+```
 
+    ## 645/2117 (30.5%) administratively censored at 60 months (OS)
+
+``` r
 #PFS
 admin_censoring_PFS <- dataDF %>%
   dplyr::summarise(
@@ -1047,21 +1453,50 @@ admin_censoring_PFS %>%
   cat(sep = "\n")
 ```
 
+    ## 374/2117 (17.7%) administratively censored at 60 months (PFS)
+
 # Differential distribution of CRs
-```{r chi_sq_response_by_tumour, warning=FALSE, message=FALSE}
+
+``` r
 # Contingency table: Tumour × Response (CR vs PR)
 resp_tab <- table(dataDF$Tumor, dataDF$DOR)
 print(resp_tab)
+```
 
+    ##           
+    ##             CR  PR
+    ##   Melanoma 576 620
+    ##   NSCLC     73 591
+    ##   RCC       79 178
+
+``` r
 # χ² test of independence
 chi2_res <- chisq.test(resp_tab)
 print(chi2_res)
+```
 
+    ## 
+    ##  Pearson's Chi-squared test
+    ## 
+    ## data:  resp_tab
+    ## X-squared = 263.12, df = 2, p-value < 2.2e-16
+
+``` r
 # Extract and display CR proportions by tumour
 cr_props <- prop.table(resp_tab, 1)[, "CR"] * 100
 cat("CR proportion by tumour (%):\n")
-print(round(cr_props, 1))
+```
 
+    ## CR proportion by tumour (%):
+
+``` r
+print(round(cr_props, 1))
+```
+
+    ## Melanoma    NSCLC      RCC 
+    ##     48.2     11.0     30.7
+
+``` r
 # Build a matrix of counts: rows = Tumour, cols = Response
 resp_tab <- table(dataDF$Tumor, dataDF$DOR)
 
@@ -1089,12 +1524,23 @@ fisher_df <- do.call(rbind, fisher_results) %>%
   mutate(p.adj = p.adjust(p.value, method = "bonferroni"))
 
 cat("\nPairwise Fisher’s Exact (with Bonferroni adj):\n")
-print(fisher_df)
-
-
 ```
-#Median time to event
-```{r median_time_to_progression_by_histology, warning=FALSE, message=FALSE}
+
+    ## 
+    ## Pairwise Fisher’s Exact (with Bonferroni adj):
+
+``` r
+print(fisher_df)
+```
+
+    ##          comparison      p.value        p.adj
+    ## 1 Melanoma vs NSCLC 1.487667e-64 4.463001e-64
+    ## 2   Melanoma vs RCC 2.824761e-07 8.474284e-07
+    ## 3      NSCLC vs RCC 5.161822e-12 1.548547e-11
+
+\#Median time to event
+
+``` r
 responses <- c("PR","CR")
 tumors   <- c("Melanoma","RCC","NSCLC")
 abbr     <- c("Melanoma"="MM", "NSCLC"="NSCLC", "RCC"="RCC")
@@ -1133,8 +1579,13 @@ for (d in responses) {
   ))
 }
 ```
+
+    ## Median time-to-progression among PR was 10.87 months (MM), 13.70 months (RCC) and 15.18 months (NSCLC).
+    ## Median time-to-progression among CR was 23.95 months (MM), 31.27 months (RCC) and 31.95 months (NSCLC).
+
 # Post-hoc power analysis
-```{r functions for power analysis using Shoenfeld approximation}
+
+``` r
 library(survival)
 library(stats)
 
@@ -1194,11 +1645,9 @@ posthoc_power_from_matched <- function(matched_df, group_var = "Tumor",
     cox_summary = s
   )
 }
-
 ```
 
-
-```{r post-hoc power estimation}
+``` r
 design_info_twoarm <- function(df,
                                group_var  = "Tumor",
                                timevar    = "censor_time_PFS",
@@ -1342,6 +1791,18 @@ for (i in seq_along(comparisons)){
 power_psm <- do.call(rbind, power_pairs_psm_ls)
 power_psm$group <- "PSM"
 power_psm
+```
+
+    ##                          comparison response HR_target  n1  n2 events_D
+    ## Melanoma vs RCC     Melanoma vs RCC       NA 0.7110767 672 256      487
+    ## Melanoma vs NSCLC Melanoma vs NSCLC       NA 0.6750987 790 472      757
+    ## RCC vs NSCLC           RCC vs NSCLC       NA 0.6677098 219 444      459
+    ##                       power group
+    ## Melanoma vs RCC   0.9197164   PSM
+    ## Melanoma vs NSCLC 0.9994635   PSM
+    ## RCC vs NSCLC      0.9825674   PSM
+
+``` r
 # power_table_final <- rbind(power_CR,power_PR, power_psm)
 # power_table_final
 # kable(
@@ -1354,10 +1815,9 @@ power_psm
 #     bootstrap_options = c("striped", "hover", "condensed"), 
 #     full_width        = FALSE
 #   )
-
 ```
 
-```{r power heatmap}
+``` r
 # Choose the deltas you want to explore (months)
 deltas <- seq(3,42, by=3)
 
@@ -1490,12 +1950,108 @@ ggplot(power_table_heat_plot,
     axis.text.y     = element_text(size = 12),
     legend.position = "right"
   )
-
-rownames(power_table_heat) <- NULL
-print(power_table_heat)
-
-cat("Power for:\n")
-cat(paste0(power_table_heat$comparison, " with ", power_table_heat$delta, " months difference is ", round(power_table_heat$power,digits = 3), "\n"))
-
 ```
 
+![](PropensityScore_joined_cohorts_mel_rcc_lung_files/figure-gfm/power%20heatmap-1.png)<!-- -->
+
+``` r
+rownames(power_table_heat) <- NULL
+print(power_table_heat)
+```
+
+    ##           comparison response HR_target  n1  n2 events_D     power group delta
+    ## 1    Melanoma vs RCC       NA 0.9077874 672 256      487 0.1572702   PSM     3
+    ## 2  Melanoma vs NSCLC       NA 0.8926051 790 472      757 0.3272676   PSM     3
+    ## 3       RCC vs NSCLC       NA 0.8893520 219 444      459 0.2181722   PSM     3
+    ## 4    Melanoma vs RCC       NA 0.8311453 672 256      487 0.4460115   PSM     6
+    ## 5  Melanoma vs NSCLC       NA 0.8060405 790 472      757 0.8187425   PSM     6
+    ## 6       RCC vs NSCLC       NA 0.8007506 219 444      459 0.6099065   PSM     6
+    ## 7    Melanoma vs RCC       NA 0.7664370 672 256      487 0.7465569   PSM     9
+    ## 8  Melanoma vs NSCLC       NA 0.7347816 790 472      757 0.9839369   PSM     9
+    ## 9       RCC vs NSCLC       NA 0.7282035 219 444      459 0.8917749   PSM     9
+    ## 10   Melanoma vs RCC       NA 0.7110767 672 256      487 0.9197164   PSM    12
+    ## 11 Melanoma vs NSCLC       NA 0.6750987 790 472      757 0.9994635   PSM    12
+    ## 12      RCC vs NSCLC       NA 0.6677098 219 444      459 0.9825674   PSM    12
+    ## 13   Melanoma vs RCC       NA 0.6631750 672 256      487 0.9817380   PSM    15
+    ## 14 Melanoma vs NSCLC       NA 0.6243830 790 472      757 0.9999918   PSM    15
+    ## 15      RCC vs NSCLC       NA 0.6164959 219 444      459 0.9982161   PSM    15
+    ## 16   Melanoma vs RCC       NA 0.6213198 672 256      487 0.9968721   PSM    18
+    ## 17 Melanoma vs NSCLC       NA 0.5807548 790 472      757 0.9999999   PSM    18
+    ## 18      RCC vs NSCLC       NA 0.5725786 219 444      459 0.9998733   PSM    18
+    ## 19   Melanoma vs RCC       NA 0.5844342 672 256      487 0.9995776   PSM    21
+    ## 20 Melanoma vs NSCLC       NA 0.5428253 790 472      757 1.0000000   PSM    21
+    ## 21      RCC vs NSCLC       NA 0.5345023 219 444      459 0.9999933   PSM    21
+    ## 22   Melanoma vs RCC       NA 0.5516827 672 256      487 0.9999532   PSM    24
+    ## 23 Melanoma vs NSCLC       NA 0.5095464 790 472      757 1.0000000   PSM    24
+    ## 24      RCC vs NSCLC       NA 0.5011744 219 444      459 0.9999997   PSM    24
+    ## 25   Melanoma vs RCC       NA 0.5224071 672 256      487 0.9999956   PSM    27
+    ## 26 Melanoma vs NSCLC       NA 0.4801123 790 472      757 1.0000000   PSM    27
+    ## 27      RCC vs NSCLC       NA 0.4717587 219 444      459 1.0000000   PSM    27
+    ## 28   Melanoma vs RCC       NA 0.4960821 672 256      487 0.9999996   PSM    30
+    ## 29 Melanoma vs NSCLC       NA 0.4538931 790 472      757 1.0000000   PSM    30
+    ## 30      RCC vs NSCLC       NA 0.4456047 219 444      459 1.0000000   PSM    30
+    ## 31   Melanoma vs RCC       NA 0.4722829 672 256      487 1.0000000   PSM    33
+    ## 32 Melanoma vs NSCLC       NA 0.4303892 790 472      757 1.0000000   PSM    33
+    ## 33      RCC vs NSCLC       NA 0.4221982 219 444      459 1.0000000   PSM    33
+    ## 34   Melanoma vs RCC       NA 0.4506627 672 256      487 1.0000000   PSM    36
+    ## 35 Melanoma vs NSCLC       NA 0.4091997 790 472      757 1.0000000   PSM    36
+    ## 36      RCC vs NSCLC       NA 0.4011280 219 444      459 1.0000000   PSM    36
+    ## 37   Melanoma vs RCC       NA 0.4309353 672 256      487 1.0000000   PSM    39
+    ## 38 Melanoma vs NSCLC       NA 0.3899988 790 472      757 1.0000000   PSM    39
+    ## 39      RCC vs NSCLC       NA 0.3820608 219 444      459 1.0000000   PSM    39
+    ## 40   Melanoma vs RCC       NA 0.4128626 672 256      487 1.0000000   PSM    42
+    ## 41 Melanoma vs NSCLC       NA 0.3725190 790 472      757 1.0000000   PSM    42
+    ## 42      RCC vs NSCLC       NA 0.3647241 219 444      459 1.0000000   PSM    42
+
+``` r
+cat("Power for:\n")
+```
+
+    ## Power for:
+
+``` r
+cat(paste0(power_table_heat$comparison, " with ", power_table_heat$delta, " months difference is ", round(power_table_heat$power,digits = 3), "\n"))
+```
+
+    ## Melanoma vs RCC with 3 months difference is 0.157
+    ##  Melanoma vs NSCLC with 3 months difference is 0.327
+    ##  RCC vs NSCLC with 3 months difference is 0.218
+    ##  Melanoma vs RCC with 6 months difference is 0.446
+    ##  Melanoma vs NSCLC with 6 months difference is 0.819
+    ##  RCC vs NSCLC with 6 months difference is 0.61
+    ##  Melanoma vs RCC with 9 months difference is 0.747
+    ##  Melanoma vs NSCLC with 9 months difference is 0.984
+    ##  RCC vs NSCLC with 9 months difference is 0.892
+    ##  Melanoma vs RCC with 12 months difference is 0.92
+    ##  Melanoma vs NSCLC with 12 months difference is 0.999
+    ##  RCC vs NSCLC with 12 months difference is 0.983
+    ##  Melanoma vs RCC with 15 months difference is 0.982
+    ##  Melanoma vs NSCLC with 15 months difference is 1
+    ##  RCC vs NSCLC with 15 months difference is 0.998
+    ##  Melanoma vs RCC with 18 months difference is 0.997
+    ##  Melanoma vs NSCLC with 18 months difference is 1
+    ##  RCC vs NSCLC with 18 months difference is 1
+    ##  Melanoma vs RCC with 21 months difference is 1
+    ##  Melanoma vs NSCLC with 21 months difference is 1
+    ##  RCC vs NSCLC with 21 months difference is 1
+    ##  Melanoma vs RCC with 24 months difference is 1
+    ##  Melanoma vs NSCLC with 24 months difference is 1
+    ##  RCC vs NSCLC with 24 months difference is 1
+    ##  Melanoma vs RCC with 27 months difference is 1
+    ##  Melanoma vs NSCLC with 27 months difference is 1
+    ##  RCC vs NSCLC with 27 months difference is 1
+    ##  Melanoma vs RCC with 30 months difference is 1
+    ##  Melanoma vs NSCLC with 30 months difference is 1
+    ##  RCC vs NSCLC with 30 months difference is 1
+    ##  Melanoma vs RCC with 33 months difference is 1
+    ##  Melanoma vs NSCLC with 33 months difference is 1
+    ##  RCC vs NSCLC with 33 months difference is 1
+    ##  Melanoma vs RCC with 36 months difference is 1
+    ##  Melanoma vs NSCLC with 36 months difference is 1
+    ##  RCC vs NSCLC with 36 months difference is 1
+    ##  Melanoma vs RCC with 39 months difference is 1
+    ##  Melanoma vs NSCLC with 39 months difference is 1
+    ##  RCC vs NSCLC with 39 months difference is 1
+    ##  Melanoma vs RCC with 42 months difference is 1
+    ##  Melanoma vs NSCLC with 42 months difference is 1
+    ##  RCC vs NSCLC with 42 months difference is 1
