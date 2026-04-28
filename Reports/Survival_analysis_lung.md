@@ -1,7 +1,7 @@
 Survival analysis Lung
 ================
 Mario Presti
-First created on Feb 2025. Updated on 27 April 2026
+First created on Feb 2025. Updated on 28 April 2026
 
 - [Introduction](#introduction)
 - [Loading Libraries](#loading-libraries)
@@ -1525,7 +1525,7 @@ results_df %>%
   column_spec(6, border_right = TRUE)
 ```
 
-<table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
+<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
 
 <caption>
 

@@ -49,7 +49,7 @@ run_survival_comparisons <- function(dataDF,
     if (!is.null(truncate_month)) {
       orig_t <- df_sub[[timevar]]
       df_sub[[timevar]]   <- pmin(orig_t, truncate_month)
-      df_sub[[statusvar]] <- ifelse(orig_t > truncate_month, 0, df_sub[["Dead"]])
+      df_sub[[statusvar]] <- ifelse(orig_t > truncate_month, 0, df_sub[[statusvar]])
     }
 
     # fit KM + Cox
